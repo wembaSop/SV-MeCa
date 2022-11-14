@@ -1,0 +1,14 @@
+# ignore the nextflow temporary files like work/ and .nextlow/ 
+
+.nextflow*
+work/
+
+# ignore the result and test directory
+results/
+scratch/
+
+# temporary ignore fasta and bam files 
+**.bam
+**.bai
+**.fa
+**.fai
