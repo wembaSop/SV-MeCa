@@ -43,6 +43,7 @@ process BREAKDANCER {
         bam2cfg.pl -q 20 -g !{bam} > "!{prefix}.cfg"
         breakdancer-max -q 20 -y 20 -h "!{prefix}.cfg" > "!{prefix}.ctx"
         python breakdancertovcf.py -o "!{prefix}.vcf" !{ref} "!{prefix}.ctx"
+        
         '''
 
 }
