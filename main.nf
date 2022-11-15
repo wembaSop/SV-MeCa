@@ -1,14 +1,14 @@
 
-process GENOME_INDEX {
+process REFERENCE_INDEX {
     
-    publishDir "$params.results/genome_index" 
+    publishDir "$params.results/reference_index" 
     input:
-        path genome
+        path ref
     output:
-        path "${genome}.fai"
+        tuple path(ref), path("*.fai")
     shell:
         '''
-        samtools faidx !{genome}
+        samtools faidx !{ref}
         '''
 
 }
@@ -19,7 +19,7 @@ process BAM_INDEX {
     input:
         path bam
     output:
-        path "${bam}.bai"
+        tuple path(bam), path("*.bai")
     shell:
         '''
         samtools index !{bam}
@@ -29,16 +29,15 @@ process BAM_INDEX {
 
 process BREAKDANCER {
     
-    publishDir "$params.results/breakdancer" 
+    publishDir "$params.results" 
     input:
-        path bam
-        path bam_index
-        path ref
+        tuple path(bam),path(bam_index)
+        tuple path(ref),path(ref_index)
     output:
-        file "*.ctx"
+        file "*breakdancer.vcf"
         
     shell:
-        prefix = bam.baseName
+        prefix = "${bam.baseName}.breakdancer"
         '''
         bam2cfg.pl -q 20 -g !{bam} > "!{prefix}.cfg"
         breakdancer-max -q 20 -y 20 -h "!{prefix}.cfg" > "!{prefix}.ctx"
@@ -48,58 +47,60 @@ process BREAKDANCER {
 
 }
 
-
-process MANTA {
+process DELLY {
     
-    publishDir "$params.results/manta" 
+    publishDir "$params.results" 
     input:
-        path bam
-        path bam_index
-        path ref 
-        path ref_index
+        tuple path(bam),path(bam_index)
+        tuple path(ref),path(ref_index)
     output:
-        file "*.vcf.gz"
+        file "*delly.vcf"
     shell:
+        outfile = "${bam.simpleName}.delly.vcf"
         '''
-        configManta.py --bam !{bam} --referenceFasta !{ref} --runDir ./
-        ./runWorkflow.py
-        cp results/variants/diploidSV.vcf.gz .
+        delly call -t ALL -g !{ref} -o delly_output.bcf !{bam}
+        bcftools view -Ov -o !{outfile} delly_output.bcf 
         '''
 
 }
+
 process LUMPY {
     
-    publishDir "$params.results/lumpy" 
+    publishDir "$params.results" 
     input:
-        path bam
-        path bam_index
+        tuple path(bam),path(bam_index)
+        tuple path(ref),path(ref_index)
         path bed
-        path ref 
-        path ref_index
     output:
-        file "*.vcf.gz"
+        file "*lumpy.vcf"
     shell:
+        outfile = "${bam.simpleName}.lumpy.vcf.gz"
         '''
 
         smoove call -x --genotype --name hg002_smoove --outdir . -f !{ref} --processes 4 --exclude !{bed} !{bam}
+        mv *genotyped.vcf.gz !{outfile}
+        bgzip -d !{outfile} 
         
         '''
 
 }
-process DELLY {
+
+process MANTA {
     
-    publishDir "$params.results/delly" 
+    publishDir "$params.results"
     input:
-        path bam
-        path bam_index
-        path ref 
-        path ref_index
+        tuple path(bam),path(bam_index)
+        tuple path(ref),path(ref_index)
     output:
-        file "*.vcf.gz"
+        file "*manta.vcf"
     shell:
+        outfile = "${bam.simpleName}.manta.vcf"
         '''
-        delly call -t ALL -g !{ref} -o delly_output.bcf !{bam}
-        bcftools view -Oz -o delly_output.vcf.gz delly_output.bcf 
+        configManta.py --bam !{bam} --referenceFasta !{ref} --runDir ./
+        ./runWorkflow.py
+        cp results/variants/diploidSV.vcf.gz .
+        bgzip -d diploidSV.vcf.gz
+        mv diploidSV.vcf !{outfile}
         '''
 
 }
@@ -108,17 +109,15 @@ process PINDEL_SINGLE {
     
     publishDir "$params.results/pindel" 
     input:
-        path bam
-        path bam_index
-        path ref 
-        path ref_index
+        tuple path(bam),path(bam_index)
+        tuple path(ref),path(ref_index)
         each chr
     output:
         file "*.vcf"
     shell:
     fileName = bam.name
     fileSimpleName = bam.simpleName
-    outfile = "${fileSimpleName}.${chr}.vcf"
+    outfile = "${fileSimpleName}.pindel.${chr}.vcf"
         '''
         echo -e !{fileName}'\t'350'\t'!{fileSimpleName} > pindel_config.txt
         pindel -T 12 -x 5 -f !{ref} -i pindel_config.txt -c !{chr} -o !{fileSimpleName}
@@ -128,12 +127,11 @@ process PINDEL_SINGLE {
 
 }
 
-process SAMBAMBA {
+process TARDIS_PREP {
     
-    publishDir "$params.results/sambamba" 
+    publishDir "$params.results/tardis_prep" 
     input:
-        path bam
-        path bam_index
+        tuple path(bam),path(bam_index)
 
     output:
         tuple path("*.markdup.bam"), path("*.markdup.bam.bai")
@@ -150,32 +148,32 @@ process SAMBAMBA {
 
 process TARDIS {
     
-    publishDir "$params.results/tardis" 
+    publishDir "$params.results" 
     input:
         tuple path(bam), path(bam_index)
-        path ref 
-        path ref_index
+        tuple path(ref),path(ref_index)
         path sonic
     output:
-        file "*.vcf"
+        file "*.tardis.vcf"
     shell:
         outfile = "${bam.baseName}"
         '''
         tardis -i !{bam} --ref !{ref} --sonic !{sonic} --out !{outfile}
-        cat "!{outfile}.vcf" | awk '\$1 ~ /^#/ {print \$0;next} {print \$0 | "sort -k1,1 -k2,2n"}' > "!{outfile}.sorted.vcf"
+        cat "!{outfile}.vcf" | awk '\$1 ~ /^#/ {print \$0;next} {print \$0 | "sort -k1,1 -k2,2n"}' > "!{outfile}.tardis.vcf"
 
         '''
 
 }
+
 workflow {
-    CHR = [1,2,321,22]
-    //GENOME_INDEX (params.reference)
+    CHR = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, "X", "Y"]
+    REFERENCE_INDEX (params.reference)
     BAM_INDEX (params.input)
-    //MANTA (params.input, BAM_INDEX.out, params.reference, GENOME_INDEX.out)
-    //LUMPY (params.input, BAM_INDEX.out,params.exclude_bed, params.reference, GENOME_INDEX.out)
-    //DELLY (params.input, BAM_INDEX.out, params.reference, GENOME_INDEX.out)
-    //PINDEL_SINGLE (params.input, BAM_INDEX.out, params.reference, GENOME_INDEX.out, CHR)
-    //SAMBAMBA (params.input, BAM_INDEX.out)
-    //TARDIS(SAMBAMBA.out, params.reference, GENOME_INDEX.out, params.sonic_file)
-    BREAKDANCER(params.input, BAM_INDEX.out)
+    BREAKDANCER (BAM_INDEX.out, REFERENCE_INDEX.out)
+    DELLY (BAM_INDEX.out, REFERENCE_INDEX.out)
+    LUMPY (BAM_INDEX.out, REFERENCE_INDEX.out, params.exclude_bed)
+    MANTA (BAM_INDEX.out, REFERENCE_INDEX.out)
+    PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, CHR)
+    TARDIS_PREP (BAM_INDEX.out)
+    TARDIS(TARDIS_PREP.out, REFERENCE_INDEX.out, params.sonic_file)
 }
