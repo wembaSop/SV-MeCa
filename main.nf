@@ -22,7 +22,7 @@ process BAM_INDEX {
         tuple path(bam), path("*.bai")
     shell:
         '''
-        samtools index !{bam}
+        samtools index -@!{task.cpus} !{bam}
         '''
 
 }
@@ -41,7 +41,7 @@ process BREAKDANCER {
         '''
         bam2cfg.pl -q 20 -g !{bam} > "!{prefix}.cfg"
         breakdancer-max -q 20 -y 20 -h "!{prefix}.cfg" > "!{prefix}.ctx"
-        python breakdancertovcf.py -o "!{prefix}.vcf" !{ref} "!{prefix}.ctx"
+        breakdancertovcf.py -o "!{prefix}.vcf" !{ref} "!{prefix}.ctx"
         
         '''
 
@@ -77,7 +77,7 @@ process LUMPY {
         outfile = "${bam.simpleName}.lumpy.vcf.gz"
         '''
 
-        smoove call -x --genotype --name hg002_smoove --outdir . -f !{ref} --processes 4 --exclude !{bed} !{bam}
+        smoove call -x --genotype --name hg002_smoove --outdir . -f !{ref} --processes !{task.cpus} --exclude !{bed} !{bam}
         mv *genotyped.vcf.gz !{outfile}
         bgzip -d !{outfile} 
         
@@ -92,15 +92,16 @@ process MANTA {
         tuple path(bam),path(bam_index)
         tuple path(ref),path(ref_index)
     output:
-        file "*manta.vcf"
+        //file "*manta.vcf"
+        file "*.gz"
     shell:
         outfile = "${bam.simpleName}.manta.vcf"
         '''
         configManta.py --bam !{bam} --referenceFasta !{ref} --runDir ./
-        ./runWorkflow.py
+        ./runWorkflow.py 
         cp results/variants/diploidSV.vcf.gz .
-        bgzip -d diploidSV.vcf.gz
-        mv diploidSV.vcf !{outfile}
+        ##bgzip -d diploidSV.vcf.gz
+        ##mv diploidSV.vcf !{outfile}
         '''
 
 }
@@ -139,8 +140,8 @@ process TARDIS_PREP {
         outfile = "${bam.baseName}.markdup.bam"
         '''
         mkdir tmp_sam
-        sambamba markdup -r --tmpdir=tmp_sam !{bam} !{outfile}
-        sambamba index !{outfile}
+        sambamba markdup -r -t !{task.cpus} --tmpdir=tmp_sam !{bam} !{outfile}
+        samtools index -@!{task.cpus} !{outfile}
 
         '''
 
@@ -166,14 +167,15 @@ process TARDIS {
 }
 
 workflow {
-    CHR = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, "X", "Y"]
+    chromosomes = Channel.of(1..22,"X","Y")
+
     REFERENCE_INDEX (params.reference)
     BAM_INDEX (params.input)
     BREAKDANCER (BAM_INDEX.out, REFERENCE_INDEX.out)
     DELLY (BAM_INDEX.out, REFERENCE_INDEX.out)
     LUMPY (BAM_INDEX.out, REFERENCE_INDEX.out, params.exclude_bed)
-    MANTA (BAM_INDEX.out, REFERENCE_INDEX.out)
-    PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, CHR)
+    //MANTA (BAM_INDEX.out, REFERENCE_INDEX.out)
+    PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, chromosomes)
     TARDIS_PREP (BAM_INDEX.out)
     TARDIS(TARDIS_PREP.out, REFERENCE_INDEX.out, params.sonic_file)
 }
