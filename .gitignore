@@ -16,3 +16,5 @@ bin/tardis_latest.sif
 bin/breakdancer.sif
 log.txt
 trace*
+execute.sh
+run.sh
