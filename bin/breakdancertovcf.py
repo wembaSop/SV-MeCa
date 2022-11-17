@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 ## Author: Rudel Christian Nkouamedjo Fankep
 ## date : 10.11.2022
 """
