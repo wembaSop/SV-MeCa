@@ -97,8 +97,10 @@ process MANTA {
     shell:
         outfile = "${bam.simpleName}.manta.vcf"
         '''
+        MEMORY="!{task.memory}"
+        MEM=${MEMORY/ GB/}
         configManta.py --bam !{bam} --referenceFasta !{ref} --runDir ./
-        ./runWorkflow.py 
+        ./runWorkflow.py -j !{task.cpus} -g $MEM
         cp results/variants/diploidSV.vcf.gz .
         ##bgzip -d diploidSV.vcf.gz
         ##mv diploidSV.vcf !{outfile}
@@ -123,6 +125,23 @@ process PINDEL_SINGLE {
         echo -e !{fileName}'\t'350'\t'!{fileSimpleName} > pindel_config.txt
         pindel -T 12 -x 5 -f !{ref} -i pindel_config.txt -c !{chr} -o !{fileSimpleName}
         pindel2vcf -P !{fileSimpleName} -r !{ref} -R GRCH37 -d `date +'%m/%d/%Y'` -v !{outfile}
+
+        '''
+
+}
+
+process MERGE_PINDEL_SINGLE {
+    
+    publishDir "$params.results" 
+    input:
+        path vcfs
+    output:
+        file "*.pindel.vcf"
+    shell:
+        '''
+        for f in $(ls *.vcf); do bgzip $f;tabix -p vcf "${f}.gz";done
+        bcftools concat -Ov -o "${f%%.*}.pindel.unsorted.vcf" *.vcf.gz
+        bcftools sort -Ov -o "${f%%.*}.pindel.vcf" "${f%%.*}.pindel.unsorted.vcf"
 
         '''
 
@@ -174,8 +193,9 @@ workflow {
     BREAKDANCER (BAM_INDEX.out, REFERENCE_INDEX.out)
     DELLY (BAM_INDEX.out, REFERENCE_INDEX.out)
     LUMPY (BAM_INDEX.out, REFERENCE_INDEX.out, params.exclude_bed)
-    //MANTA (BAM_INDEX.out, REFERENCE_INDEX.out)
+    MANTA (BAM_INDEX.out, REFERENCE_INDEX.out)
     PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, chromosomes)
     TARDIS_PREP (BAM_INDEX.out)
     TARDIS(TARDIS_PREP.out, REFERENCE_INDEX.out, params.sonic_file)
+    MERGE_PINDEL_SINGLE(PINDEL_SINGLE.out.collect())
 }
