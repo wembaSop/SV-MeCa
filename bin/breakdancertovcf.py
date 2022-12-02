@@ -57,9 +57,9 @@ def make_metadata(fasta):
     mandatory_line.append('##INFO=<ID=END,Number=1,Type=Integer,Description="Stop position of the SV">')
     mandatory_line.append('##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of the SV">')
     mandatory_line.append('##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="SV length">')
-    ## add FORMAT currently DP, GT wil be ./.
+    ## add FORMAT currently PR, GT wil be ./.
     mandatory_line.append('##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">')
-    mandatory_line.append('##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth>')
+    mandatory_line.append('##FORMAT=<ID=PR,Number=1,Type=Integer,Description="Total number of supporting read pairs>')
     ## Add Contigs informations
     for i in contigs:
         mandatory_line.append("##contig=<ID={},length={}>".format(i[0],i[1]))
@@ -81,7 +81,7 @@ def main():
             continue
         else:
             line = line.split()
-            header.append("{chrom}\t{pos}\t{id}\t{ref}\t<{alt}>\t{qual}\t{filter}\tCHROM2={chrom2};END={end};SVTYPE={svtype};SVLEN={svlen}\tGT:DP\t{gt}:{dp}".format(
+            header.append("{chrom}\t{pos}\t{id}\t{ref}\t<{alt}>\t{qual}\t{filter}\tCHROM2={chrom2};END={end};SVTYPE={svtype};SVLEN={svlen}\tGT:PR\t{gt}:{dp}".format(
                 chrom=line[0],
                 pos=line[1],
                 id=".",
