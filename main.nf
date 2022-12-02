@@ -1,7 +1,6 @@
-
 process REFERENCE_INDEX {
     
-    publishDir "$params.results/reference_index" 
+    //publishDir "$params.results/reference_index" 
     input:
         path ref
     output:
@@ -15,7 +14,7 @@ process REFERENCE_INDEX {
 
 process BAM_INDEX {
     
-    publishDir "$params.results/bam_index" 
+    //publishDir "$params.results/bam_index" 
     input:
         path bam
     output:
@@ -29,18 +28,22 @@ process BAM_INDEX {
 
 process BREAKDANCER {
     
-    publishDir "$params.results" 
+    publishDir "$params.results/breakdancer" 
     input:
         tuple path(bam),path(bam_index)
         tuple path(ref),path(ref_index)
+        val map
+        val filt
     output:
         file "*breakdancer.vcf"
         
     shell:
+        def my_map = map ? map : 20
+        def my_filt = filt ? filt : 20
         prefix = "${bam.baseName}.breakdancer"
         '''
-        bam2cfg.pl -q 20 -g !{bam} > "!{prefix}.cfg"
-        breakdancer-max -q 20 -y 20 -h "!{prefix}.cfg" > "!{prefix}.ctx"
+        bam2cfg.pl -q !{my_map} -g !{bam} > "!{prefix}.cfg"
+        breakdancer-max -q !{my_map} -y !{my_filt} -h "!{prefix}.cfg" > "!{prefix}.ctx"
         breakdancertovcf.py -o "!{prefix}.vcf" !{ref} "!{prefix}.ctx"
         
         '''
@@ -53,12 +56,14 @@ process DELLY {
     input:
         tuple path(bam),path(bam_index)
         tuple path(ref),path(ref_index)
+        path bed 
     output:
         file "*delly.vcf"
     shell:
+        def my_bed = bed ? " -x $bed" : "" 
         outfile = "${bam.simpleName}.delly.vcf"
         '''
-        delly call -t ALL -g !{ref} -o delly_output.bcf !{bam}
+        delly call!{my_bed} -t ALL -g !{ref} -o delly_output.bcf !{bam}
         bcftools view -Ov -o !{outfile} delly_output.bcf 
         '''
 
@@ -74,10 +79,11 @@ process LUMPY {
     output:
         file "*lumpy.vcf"
     shell:
+        def my_bed = bed ? " --exclude $bed" : "" 
+        prefix = bam.simpleName
         outfile = "${bam.simpleName}.lumpy.vcf.gz"
         '''
-
-        smoove call -x --genotype --name hg002_smoove --outdir . -f !{ref} --processes !{task.cpus} --exclude !{bed} !{bam}
+        smoove call -x --genotype --name !{prefix} --outdir . -f !{ref} --processes !{task.cpus}!{my_bed} !{bam}
         mv *genotyped.vcf.gz !{outfile}
         bgzip -d !{outfile} 
         
@@ -91,10 +97,11 @@ process MANTA {
     input:
         tuple path(bam),path(bam_index)
         tuple path(ref),path(ref_index)
+        path bed 
     output:
-        //file "*manta.vcf"
-        file "*.gz"
+        file "*manta.vcf"
     shell:
+        def my_bed = bed ? " --callRegions $bed" : ""  // To update with include regions not finish
         outfile = "${bam.simpleName}.manta.vcf"
         '''
         MEMORY="!{task.memory}"
@@ -102,8 +109,8 @@ process MANTA {
         configManta.py --bam !{bam} --referenceFasta !{ref} --runDir ./
         ./runWorkflow.py -j !{task.cpus} -g $MEM
         cp results/variants/diploidSV.vcf.gz .
-        ##bgzip -d diploidSV.vcf.gz
-        ##mv diploidSV.vcf !{outfile}
+        bgzip -d diploidSV.vcf.gz
+        mv diploidSV.vcf !{outfile}
         '''
 
 }
@@ -123,7 +130,7 @@ process PINDEL_SINGLE {
     outfile = "${fileSimpleName}.pindel.${chr}.vcf"
         '''
         echo -e !{fileName}'\t'350'\t'!{fileSimpleName} > pindel_config.txt
-        pindel -T 12 -x 5 -f !{ref} -i pindel_config.txt -c !{chr} -o !{fileSimpleName}
+        pindel -T !{task.cpus} -f !{ref} -i pindel_config.txt -c !{chr} -o !{fileSimpleName}
         pindel2vcf -P !{fileSimpleName} -r !{ref} -R GRCH37 -d `date +'%m/%d/%Y'` -v !{outfile}
 
         '''
@@ -173,12 +180,14 @@ process TARDIS {
         tuple path(bam), path(bam_index)
         tuple path(ref),path(ref_index)
         path sonic
+        path bed 
     output:
         file "*.tardis.vcf"
     shell:
+        def my_bed = bed ? " --gaps $bed" : "" 
         outfile = "${bam.baseName}"
         '''
-        tardis -i !{bam} --ref !{ref} --sonic !{sonic} --out !{outfile}
+        tardis -i !{bam} --ref !{ref} --sonic !{sonic} --out !{outfile}!{my_bed}
         cat "!{outfile}.vcf" | awk '\$1 ~ /^#/ {print \$0;next} {print \$0 | "sort -k1,1 -k2,2n"}' > "!{outfile}.tardis.vcf"
 
         '''
