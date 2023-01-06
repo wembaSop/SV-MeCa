@@ -74,17 +74,19 @@ def main():
     st = time.time()
     args = my_parser()
     ctx_file = read_ctx_file(args.breakdancer)
-    
+    variant_id = 1
     header = make_metadata(args.reference)
     for line in ctx_file:
         if line.startswith("#"):
             continue
         else:
             line = line.split()
+            if line[6] != "DEL":
+                continue
             header.append("{chrom}\t{pos}\t{id}\t{ref}\t<{alt}>\t{qual}\t{filter}\tCHROM2={chrom2};END={end};SVTYPE={svtype};SVLEN={svlen}\tGT:PR\t{gt}:{dp}".format(
                 chrom=line[0],
                 pos=line[1],
-                id=".",
+                id=variant_id,
                 ref=".",
                 gt="./.",
                 filter=".",
@@ -95,6 +97,7 @@ def main():
                 svlen=abs(int(line[7])),
                 qual=line[8],
                 dp=line[9]))
+            variant_id+=1
     if args.output:
         output_name = args.output
     else:
