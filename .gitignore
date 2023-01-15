@@ -19,3 +19,4 @@ trace*
 execute.sh
 run.sh
 run.log
+data/hg19.bed
