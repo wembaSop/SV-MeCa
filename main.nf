@@ -23,13 +23,15 @@ process INCLUDE_REGIONS {
         path bed
 
     output:
-        path "include.bed"
+        tuple path("include.bed.gz"), path("include.bed.gz.tbi")
 
     shell:
 
         '''
         samtools view -H !{bam}| grep "^@SQ"| awk -F '[\t:]' '{print $3"\t"0"\t"$5}'> full.bed
         bedtools subtract -a full.bed -b !{bed} > include.bed
+        bgzip include.bed
+        tabix -p bed include.bed.gz
 
         '''
 
@@ -60,8 +62,7 @@ process BREAKDANCER {
     input:
         tuple path(bam),path(bam_index)
         tuple path(ref),path(ref_index)
-        val map
-        val filt
+        path bed
 
     output:
         file "*breakdancer.vcf"
@@ -71,10 +72,15 @@ process BREAKDANCER {
         prefix = "${bam.baseName}.breakdancer"
 
         '''
-        bam2cfg.pl -q !{map} -g !{bam} > "!{prefix}.cfg"
-        breakdancer-max -q !{map} -y !{filt} -h "!{prefix}.cfg" > "!{prefix}.ctx"
-        breakdancertovcf.py -o "!{prefix}.vcf" !{ref} "!{prefix}.ctx"
-        
+        bam2cfg.pl -g !{bam} > "!{prefix}.cfg"
+        breakdancer-max -h "!{prefix}.cfg" > "!{prefix}.ctx"
+        breakdancertovcf.py -o "!{prefix}.raw.vcf" !{ref} "!{prefix}.ctx"
+        grep "^#" "!{prefix}.raw.vcf" > "!{prefix}.unsorted.vcf"
+        grep -v "^#" "!{prefix}.raw.vcf"| awk 'BEGIN{OFS="\t"};{$3=NR; print $0}'>> "!{prefix}.unsorted.vcf"
+        cat "!{prefix}.unsorted.vcf" | awk '\$1 ~ /^#/ {print \$0;next} {print \$0 | "sort -k1,1 -k2,2n"}' > "!{prefix}.sorted.vcf"
+        bgzip "!{prefix}.sorted.vcf"
+        tabix -p vcf "!{prefix}.sorted.vcf.gz"
+        bcftools view -R !{bed} -Ov -o "!{prefix}.vcf" "!{prefix}.sorted.vcf.gz"
         '''
 
 }
@@ -93,7 +99,7 @@ process DELLY {
 
     shell:
 
-        def my_bed = bed ? " -x $bed" : "" 
+        my_bed = bed ? " -x $bed" : "" 
         outfile = "${bam.simpleName}.delly.vcf"
 
         '''
@@ -117,7 +123,7 @@ process LUMPY {
 
     shell:
 
-        def my_bed = bed ? " --exclude $bed" : "" 
+        my_bed = bed ? " --exclude $bed" : "" 
         prefix = bam.simpleName
         outfile = "${bam.simpleName}.lumpy.vcf.gz"
 
@@ -135,16 +141,16 @@ process MANTA {
     publishDir "$params.results"
 
     input:
-        tuple path(bam),path(bam_index)
-        tuple path(ref),path(ref_index)
-        path bed //regions to include
+        tuple path(bam), path(bam_index)
+        tuple path(ref), path(ref_index)
+        tuple path(bed), path(bed_i) //regions to include
 
     output:
         file "*manta.vcf"
 
     shell:
 
-        def my_bed = bed ? " --callRegions $bed" : ""  
+        my_bed = bed ? " --callRegions $bed --exome" : ""  
         outfile = "${bam.simpleName}.manta.vcf"
 
         '''
@@ -175,15 +181,15 @@ process PINDEL_SINGLE {
 
     shell:
 
-        def my_bed = bed ? " --exclude $bed" : ""
+        my_bed = bed ? " --exclude $bed" : ""
         fileName = bam.name
         fileSimpleName = bam.simpleName
         outfile = "${fileSimpleName}.pindel.${chr}.vcf"
 
         '''
         echo -e !{fileName}'\t'!{insert}'\t'!{fileSimpleName} > pindel_config.txt
-        pindel -T !{task.cpus} -f !{ref} -i pindel_config.txt -c !{chr} -o !{fileSimpleName}!{my_bed}
-        pindel2vcf -P !{fileSimpleName} -r !{ref} -R GRCH37 -d `date +'%m/%d/%Y'` -v !{outfile}
+        pindel -N -M 3 -r false -T !{task.cpus} -f !{ref} -i pindel_config.txt -c !{chr} -o !{fileSimpleName}!{my_bed}
+        pindel2vcf -P !{fileSimpleName} -is 50 -e 3 -r !{ref} -R GRCH37 -d `date +'%m/%d/%Y'` -v !{outfile}
 
         '''
 
@@ -204,8 +210,9 @@ process MERGE_PINDEL_SINGLE {
         '''
         for f in $(ls *.vcf); do bgzip $f;tabix -p vcf "${f}.gz";done
         bcftools concat -Ov -o "${f%%.*}.pindel.unsorted.vcf" *.vcf.gz
-        bcftools sort -Ov -o "${f%%.*}.pindel.vcf" "${f%%.*}.pindel.unsorted.vcf"
-
+        bcftools sort -Ov -o "${f%%.*}.pindel.raw.vcf" "${f%%.*}.pindel.unsorted.vcf"
+        grep "^#" "${f%%.*}.pindel.raw.vcf" > "${f%%.*}.pindel.vcf"
+        grep -v "^#" "${f%%.*}.pindel.raw.vcf"| awk 'BEGIN{OFS="\t"};{$3=NR; print $0}'>> "${f%%.*}.pindel.vcf"
         '''
 
 }
@@ -248,7 +255,7 @@ process TARDIS {
 
     shell:
 
-        def my_bed = bed ? " --gaps $bed" : "" 
+        my_bed = bed ? " --gaps $bed" : "" 
         outfile = "${bam.baseName}"
 
         '''
@@ -259,23 +266,61 @@ process TARDIS {
 
 }
 
+process SURVIVOR_MERGE {
+    
+    publishDir "$params.results/survivor_merge" 
+
+    input:
+        path breakdancer
+        path delly
+        path lumpy
+        path manta
+        path pindel
+        path tardis
+
+    output:
+        file "*.survivor.vcf"
+
+    shell:
+
+        
+        outfile = "${bam.baseName}.survivor.vcf"
+
+        '''
+        for f in $(ls *.vcf);do edit_svtype.py $f "${f%.*}.edit.vcf";done
+        for f in $(ls *.edit.vcf);do echo $ >> files.txt;done
+        SURVIVOR merge files.txt 0.9 1 1 0 0 50 merge.new.vcf
+        cat merge.new.vcf | awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1 -k2,2n"}' > !{outfile}
+
+        '''
+
+}
+
+
+
 workflow {
-    chromosomes = Channel.of(1..22,"X","Y")
     REFERENCE_INDEX (params.reference)
     BAM_INDEX (params.input)
-    
-    if (params.bed) {
-        INCLUDE_REGIONS(BAM_INDEX.out, params.bed)  
-        MANTA (BAM_INDEX.out, REFERENCE_INDEX.out, INCLUDE_REGIONS.out)
-    } else {
-        MANTA (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
+    if (!params.skip_manta){
+        if (params.bed) {
+            INCLUDE_REGIONS(BAM_INDEX.out, params.bed)  
+            MANTA (BAM_INDEX.out, REFERENCE_INDEX.out, INCLUDE_REGIONS.out)
+        } else {
+            MANTA (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
+        }
     }
-
-    BREAKDANCER (BAM_INDEX.out, REFERENCE_INDEX.out, params.bd_map_qual, params.bd_filt_qual)
-    DELLY (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
-    LUMPY (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
-    PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed, params.pd_insert, chromosomes)
-    TARDIS_PREP (BAM_INDEX.out)
-    TARDIS(TARDIS_PREP.out, REFERENCE_INDEX.out, params.sonic_file, params.bed)
-    MERGE_PINDEL_SINGLE(PINDEL_SINGLE.out.collect())
+    //BREAKDANCER (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
+    //DELLY (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
+    //LUMPY (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
+    if (params.pd_multi){
+        chromosomes = Channel.of(1..22)
+        PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed, params.pd_insert, chromosomes)
+        MERGE_PINDEL_SINGLE(PINDEL_SINGLE.out.collect())
+    } else{
+        chromosomes = Channel.of("ALL")
+        PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed, params.pd_insert, chromosomes)
+    }
+    
+    //TARDIS_PREP (BAM_INDEX.out)
+    //TARDIS(TARDIS_PREP.out, REFERENCE_INDEX.out, params.sonic_file, params.bed)
 }
