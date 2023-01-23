@@ -1,4 +1,4 @@
-#!/projects/ag-fbz/rnkouame/software/miniconda3/bin/python
+#!/usr/bin/env python3
 
 import sys
 

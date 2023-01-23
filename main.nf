@@ -57,19 +57,19 @@ process BAM_INDEX {
 
 process BREAKDANCER {
     
-    publishDir "$params.results/breakdancer" 
+    publishDir "$params.results/standalone" 
 
     input:
         tuple path(bam),path(bam_index)
         tuple path(ref),path(ref_index)
-        path bed
+        tuple path(bed), path(bed_i) //regions to include
 
     output:
         file "*breakdancer.vcf"
         
     shell:
 
-        prefix = "${bam.baseName}.breakdancer"
+        prefix = "${bam.simpleName}.breakdancer"
 
         '''
         bam2cfg.pl -g !{bam} > "!{prefix}.cfg"
@@ -87,7 +87,7 @@ process BREAKDANCER {
 
 process DELLY {
     
-    publishDir "$params.results" 
+    publishDir "$params.results/standalone" 
 
     input:
         tuple path(bam),path(bam_index)
@@ -111,7 +111,7 @@ process DELLY {
 
 process LUMPY {
     
-    publishDir "$params.results" 
+    publishDir "$params.results/standalone" 
 
     input:
         tuple path(bam),path(bam_index)
@@ -138,7 +138,7 @@ process LUMPY {
 
 process MANTA {
     
-    publishDir "$params.results"
+    publishDir "$params.results/standalone"
 
     input:
         tuple path(bam), path(bam_index)
@@ -173,7 +173,6 @@ process PINDEL_SINGLE {
         tuple path(bam),path(bam_index)
         tuple path(ref),path(ref_index)
         path bed
-        val insert
         each chr
 
     output:
@@ -187,7 +186,10 @@ process PINDEL_SINGLE {
         outfile = "${fileSimpleName}.pindel.${chr}.vcf"
 
         '''
-        echo -e !{fileName}'\t'!{insert}'\t'!{fileSimpleName} > pindel_config.txt
+        bam2cfg.pl -g !{bam} > "!{fileSimpleName}.cfg"
+        INSERT="$(grep 'readgroup' "!{fileSimpleName}.cfg"|head -n 1 | cut -f 9 |cut -d ':' -f 2)"
+        INSER=${INSERT%.*}
+        echo -e !{fileName}"\t$INSER\t"!{fileSimpleName} > pindel_config.txt
         pindel -N -M 3 -r false -T !{task.cpus} -f !{ref} -i pindel_config.txt -c !{chr} -o !{fileSimpleName}!{my_bed}
         pindel2vcf -P !{fileSimpleName} -is 50 -e 3 -r !{ref} -R GRCH37 -d `date +'%m/%d/%Y'` -v !{outfile}
 
@@ -197,7 +199,7 @@ process PINDEL_SINGLE {
 
 process MERGE_PINDEL_SINGLE {
     
-    publishDir "$params.results" 
+    publishDir "$params.results/standalone" 
 
     input:
         path vcfs
@@ -219,7 +221,7 @@ process MERGE_PINDEL_SINGLE {
 
 process TARDIS_PREP {
     
-    publishDir "$params.results/tardis_prep" 
+    //publishDir "$params.results" 
 
     input:
         tuple path(bam),path(bam_index)
@@ -229,7 +231,7 @@ process TARDIS_PREP {
 
     shell:
 
-        outfile = "${bam.baseName}.markdup.bam"
+        outfile = "${bam.simpleName}.markdup.bam"
 
         '''
         mkdir tmp_sam
@@ -242,7 +244,7 @@ process TARDIS_PREP {
 
 process TARDIS {
     
-    publishDir "$params.results" 
+    publishDir "$params.results/standalone" 
 
     input:
         tuple path(bam), path(bam_index)
@@ -268,7 +270,7 @@ process TARDIS {
 
 process SURVIVOR_MERGE {
     
-    publishDir "$params.results/survivor_merge" 
+    publishDir "$params.results/merge" 
 
     input:
         path breakdancer
@@ -284,13 +286,16 @@ process SURVIVOR_MERGE {
     shell:
 
         
-        outfile = "${bam.baseName}.survivor.vcf"
+        outfile = "${delly.simpleName}"
 
         '''
         for f in $(ls *.vcf);do edit_svtype.py $f "${f%.*}.edit.vcf";done
-        for f in $(ls *.edit.vcf);do echo $ >> files.txt;done
-        SURVIVOR merge files.txt 0.9 1 1 0 0 50 merge.new.vcf
-        cat merge.new.vcf | awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1 -k2,2n"}' > !{outfile}
+        for f in $(ls *.edit.vcf);do echo $f >> files.txt;done
+        SURVIVOR merge files.txt 0.9 1 1 0 0 50 merge.new.vcf &> survivor.log
+        cat merge.new.vcf | awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1 -k2,2n"}' > "!{outfile}.survivor.raw.vcf"
+        bgzip "!{outfile}.survivor.raw.vcf"
+        tabix -p vcf "!{outfile}.survivor.raw.vcf.gz"
+        bcftools view -r 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22 -Ov -o "!{outfile}.survivor.vcf" "!{outfile}.survivor.raw.vcf.gz"
 
         '''
 
@@ -299,28 +304,30 @@ process SURVIVOR_MERGE {
 
 
 workflow {
+    
     REFERENCE_INDEX (params.reference)
     BAM_INDEX (params.input)
-    if (!params.skip_manta){
-        if (params.bed) {
-            INCLUDE_REGIONS(BAM_INDEX.out, params.bed)  
-            MANTA (BAM_INDEX.out, REFERENCE_INDEX.out, INCLUDE_REGIONS.out)
-        } else {
-            MANTA (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
-        }
+    if (params.bed) {
+        INCLUDE_REGIONS(BAM_INDEX.out, params.bed)  
+        MANTA (BAM_INDEX.out, REFERENCE_INDEX.out, INCLUDE_REGIONS.out)
+        BREAKDANCER (BAM_INDEX.out, REFERENCE_INDEX.out, INCLUDE_REGIONS.out)
+    } else {
+        MANTA (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
+        BREAKDANCER (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
     }
-    //BREAKDANCER (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
-    //DELLY (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
-    //LUMPY (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
+    
+    DELLY (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
+    LUMPY (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
     if (params.pd_multi){
         chromosomes = Channel.of(1..22)
-        PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed, params.pd_insert, chromosomes)
+        PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed, chromosomes)
         MERGE_PINDEL_SINGLE(PINDEL_SINGLE.out.collect())
     } else{
         chromosomes = Channel.of("ALL")
-        PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed, params.pd_insert, chromosomes)
+        PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed, chromosomes)
     }
     
-    //TARDIS_PREP (BAM_INDEX.out)
-    //TARDIS(TARDIS_PREP.out, REFERENCE_INDEX.out, params.sonic_file, params.bed)
+    TARDIS_PREP (BAM_INDEX.out)
+    TARDIS(TARDIS_PREP.out, REFERENCE_INDEX.out, params.sonic_file, params.bed)
+    SURVIVOR_MERGE(BREAKDANCER.out, DELLY.out, LUMPY.out, MANTA.out, MERGE_PINDEL_SINGLE.out, TARDIS.out)
 }
