@@ -30,7 +30,13 @@ def read_ctx_file(ctx):
         content = f.readlines()
     return content
 
-def make_metadata(fasta):
+def fix_float(num):
+    if num % 1 == 0:
+        return str(int(num))
+    else:
+        return "{:.2f}".format(num)
+    
+def make_metadata(fasta,sample):
     pair={}
     with open(fasta,"r") as f:
         flag = False
@@ -60,11 +66,13 @@ def make_metadata(fasta):
     ## add FORMAT currently PR, GT wil be ./.
     mandatory_line.append('##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">')
     mandatory_line.append('##FORMAT=<ID=PR,Number=1,Type=Integer,Description="Total number of supporting read pairs>')
+    mandatory_line.append('##FORMAT=<ID=SBP,Number=1,Type=Float,Description="Strand bias at POS>')
+    mandatory_line.append('##FORMAT=<ID=SBE,Number=1,Type=Float,Description="Strand bias at END>')
     ## Add Contigs informations
     for i in contigs:
         mandatory_line.append("##contig=<ID={},length={}>".format(i[0],i[1]))
     ## add columns header
-    mandatory_line.append('#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\tunknown')
+    mandatory_line.append('#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t{}'.format(sample))
 
     return mandatory_line
 
@@ -74,16 +82,21 @@ def main():
     st = time.time()
     args = my_parser()
     ctx_file = read_ctx_file(args.breakdancer)
+    sample_name = args.breakdancer.split(".")[0]
     variant_id = 1
-    header = make_metadata(args.reference)
+    header = make_metadata(args.reference,sample_name)
     for line in ctx_file:
         if line.startswith("#"):
             continue
         else:
             line = line.split()
-            if line[6] != "DEL":
+            if ((line[6] != "DEL") and (line[6] != "INS")) :
                 continue
-            header.append("{chrom}\t{pos}\t{id}\t{ref}\t<{alt}>\t{qual}\t{filter}\tCHROM2={chrom2};END={end};SVTYPE={svtype};SVLEN={svlen}\tGT:PR\t{gt}:{dp}".format(
+            orientation_p = line[2][:-1].split("+")
+            orientation_p = [int(i) for i in orientation_p]
+            orientation_e = line[5][:-1].split("+")
+            orientation_e = [int(i) for i in orientation_e]
+            header.append("{chrom}\t{pos}\t{id}\t{ref}\t<{alt}>\t{qual}\t{filter}\tCHROM2={chrom2};END={end};SVTYPE={svtype};SVLEN={svlen}\tGT:PR:SBP:SBE\t{gt}:{dp}:{sbp}:{sbe}".format(
                 chrom=line[0],
                 pos=line[1],
                 id=variant_id,
@@ -96,7 +109,9 @@ def main():
                 svtype=line[6],
                 svlen=abs(int(line[7])),
                 qual=line[8],
-                dp=line[9]))
+                dp=line[9],
+                sbp=fix_float(min(orientation_p)/max(orientation_p)),
+                sbe=fix_float(min(orientation_e)/max(orientation_e))))
             variant_id+=1
     if args.output:
         output_name = args.output
