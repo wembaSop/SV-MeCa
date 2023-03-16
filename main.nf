@@ -55,6 +55,28 @@ process BAM_INDEX {
 
 }
 
+process METRICS {
+    
+    publishDir "$params.results/metrics" 
+
+    input:
+        tuple path(bam),path(bam_index)
+        tuple path(ref),path(ref_index)
+
+    output:
+        path "*.metrics"
+
+    shell:
+        outfile = "${bam.baseName}.metrics"
+        '''
+        MEMORY="!{task.memory}"
+        MEM=${MEMORY/ GB/G}
+        echo "RUNNING gatk --java-options "-Xmx$MEM" CollectWgsMetrics -I !{bam} -R !{ref} -O !{outfile}"
+        gatk --java-options "-Xmx$MEM" CollectWgsMetrics -I !{bam} -R !{ref} -O !{outfile}
+        '''
+
+}
+
 process BREAKDANCER {
     
     publishDir "$params.results/standalone" 
@@ -72,15 +94,26 @@ process BREAKDANCER {
         prefix = "${bam.simpleName}.breakdancer"
 
         '''
+        # read the sample name from bam
+        SAMPLE=$(samtools samples !{bam}|head -n 1|cut -f1)
+        # create the config file for breakdancer max
         bam2cfg.pl -g !{bam} > "!{prefix}.cfg"
+        # run brakdancer max with "-h" to print alle frequency column
         breakdancer-max -h "!{prefix}.cfg" > "!{prefix}.ctx"
+        # convert the ctx output to vcf - Only taking DEL and INS in consideration
         breakdancertovcf.py -o "!{prefix}.raw.vcf" !{ref} "!{prefix}.ctx"
+        # Save the header of the vcf
         grep "^#" "!{prefix}.raw.vcf" > "!{prefix}.unsorted.vcf"
+        # then add the ID: just enumerate from 1...
         grep -v "^#" "!{prefix}.raw.vcf"| awk 'BEGIN{OFS="\t"};{$3=NR; print $0}'>> "!{prefix}.unsorted.vcf"
+        # sort the vcf file 
         cat "!{prefix}.unsorted.vcf" | awk '\$1 ~ /^#/ {print \$0;next} {print \$0 | "sort -k1,1 -k2,2n"}' > "!{prefix}.sorted.vcf"
+        # compress, index and filter to save regions in the bed file
         bgzip "!{prefix}.sorted.vcf"
         tabix -p vcf "!{prefix}.sorted.vcf.gz"
         bcftools view -R !{bed} -Ov -o "!{prefix}.vcf" "!{prefix}.sorted.vcf.gz"
+        # edit the vcf to add the sample name 
+        sed -i -E "s/(#CHROM.+FORMAT\t).+/\1BD_${SAMPLE}/" "!{prefix}.vcf"
         '''
 
 }
@@ -103,8 +136,14 @@ process DELLY {
         outfile = "${bam.simpleName}.delly.vcf"
 
         '''
+        # read the sample name from bam
+        SAMPLE=$(samtools samples !{bam}|head -n 1|cut -f1)
+    
         delly call!{my_bed} -t ALL -g !{ref} -o delly_output.bcf !{bam}
         bcftools view -Ov -o !{outfile} delly_output.bcf 
+
+        # edit the vcf to add the sample name 
+        sed -i -E "s/(#CHROM.+FORMAT\t).+/\1DL_${SAMPLE}/" !{outfile}
         '''
 
 }
@@ -125,12 +164,19 @@ process LUMPY {
 
         my_bed = bed ? " --exclude $bed" : "" 
         prefix = bam.simpleName
-        outfile = "${bam.simpleName}.lumpy.vcf.gz"
+        outfile = "${bam.simpleName}.lumpy.vcf"
 
         '''
+        # read the sample name from bam
+        SAMPLE=$(samtools samples !{bam}|head -n 1|cut -f1)
+
         smoove call -x --genotype --name !{prefix} --outdir . -f !{ref} --processes !{task.cpus}!{my_bed} !{bam}
-        mv *genotyped.vcf.gz !{outfile}
-        bgzip -d !{outfile} 
+        bgzip -d *genotyped.vcf.gz
+        mv *genotyped.vcf !{outfile}
+
+        # edit the vcf to add the sample name 
+        sed -i -E "s/(#CHROM.+FORMAT\t).+/\1LP_${SAMPLE}/" !{outfile}
+        
         
         '''
 
@@ -154,6 +200,9 @@ process MANTA {
         outfile = "${bam.simpleName}.manta.vcf"
 
         '''
+        # read the sample name from bam
+        SAMPLE=$(samtools samples !{bam}|head -n 1|cut -f1)
+
         MEMORY="!{task.memory}"
         MEM=${MEMORY/ GB/}
         configManta.py --bam !{bam} --referenceFasta !{ref} --runDir ./!{my_bed}
@@ -161,6 +210,9 @@ process MANTA {
         cp results/variants/diploidSV.vcf.gz .
         bgzip -d diploidSV.vcf.gz
         mv diploidSV.vcf !{outfile}
+
+        # edit the vcf to add the sample name 
+        sed -i -E "s/(#CHROM.+FORMAT\t).+/\1MT_${SAMPLE}/" !{outfile}
         '''
 
 }
@@ -186,13 +238,18 @@ process PINDEL_SINGLE {
         outfile = "${fileSimpleName}.pindel.${chr}.vcf"
 
         '''
+        # read the sample name from bam
+        SAMPLE=$(samtools samples !{bam}|head -n 1|cut -f1)
+
         bam2cfg.pl -g !{bam} > "!{fileSimpleName}.cfg"
         INSERT="$(grep 'readgroup' "!{fileSimpleName}.cfg"|head -n 1 | cut -f 9 |cut -d ':' -f 2)"
         INSER=${INSERT%.*}
-        echo -e !{fileName}"\t$INSER\t"!{fileSimpleName} > pindel_config.txt
+        echo -e !{fileName}"\t$INSER\t"PD_${SAMPLE} > pindel_config.txt
         pindel -N -M 3 -r false -T !{task.cpus} -f !{ref} -i pindel_config.txt -c !{chr} -o !{fileSimpleName}!{my_bed}
         pindel2vcf -P !{fileSimpleName} -is 50 -e 3 -r !{ref} -R GRCH37 -d `date +'%m/%d/%Y'` -v !{outfile}
-
+        bgzip !{outfile}
+        tabix -p vcf "!{outfile}.gz"
+        bcftools norm -f !{ref} -Ov -o !{outfile} "!{outfile}.gz"
         '''
 
 }
@@ -215,6 +272,7 @@ process MERGE_PINDEL_SINGLE {
         bcftools sort -Ov -o "${f%%.*}.pindel.raw.vcf" "${f%%.*}.pindel.unsorted.vcf"
         grep "^#" "${f%%.*}.pindel.raw.vcf" > "${f%%.*}.pindel.vcf"
         grep -v "^#" "${f%%.*}.pindel.raw.vcf"| awk 'BEGIN{OFS="\t"};{$3=NR; print $0}'>> "${f%%.*}.pindel.vcf"
+
         '''
 
 }
@@ -234,6 +292,7 @@ process TARDIS_PREP {
         outfile = "${bam.simpleName}.markdup.bam"
 
         '''
+        
         mkdir tmp_sam
         sambamba markdup -r -t !{task.cpus} --tmpdir=tmp_sam !{bam} !{outfile}
         samtools index -@!{task.cpus} !{outfile}
@@ -263,6 +322,8 @@ process TARDIS {
         '''
         tardis -i !{bam} --ref !{ref} --sonic !{sonic} --out !{outfile}!{my_bed}
         cat "!{outfile}.vcf" | awk '\$1 ~ /^#/ {print \$0;next} {print \$0 | "sort -k1,1 -k2,2n"}' > "!{outfile}.tardis.vcf"
+        # edit the vcf to add the sample name 
+        sed -i -E "s/(#CHROM.+FORMAT\t)(.+)/\1TD_\2/" "!{outfile}.tardis.vcf"
 
         '''
 
@@ -289,13 +350,15 @@ process SURVIVOR_MERGE {
         outfile = "${delly.simpleName}"
 
         '''
+        # Edit DUP to INS and ignore other sv than DEL DUP & INS
         for f in $(ls *.vcf);do edit_svtype.py $f "${f%.*}.edit.vcf";done
+
         for f in $(ls *.edit.vcf);do echo $f >> files.txt;done
         SURVIVOR merge files.txt 0.9 1 1 0 0 50 merge.new.vcf &> survivor.log
         cat merge.new.vcf | awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1 -k2,2n"}' > "!{outfile}.survivor.raw.vcf"
         bgzip "!{outfile}.survivor.raw.vcf"
         tabix -p vcf "!{outfile}.survivor.raw.vcf.gz"
-        bcftools view -r 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22 -Ov -o "!{outfile}.survivor.vcf" "!{outfile}.survivor.raw.vcf.gz"
+        bcftools view -i'SVLEN<=-50 | SVLEN>=50' -Ov -o "!{outfile}.survivor.vcf" "!{outfile}.survivor.raw.vcf.gz"
 
         '''
 
