@@ -36,6 +36,7 @@ def main():
     f_new = open(output_file, "w")
     stop = 0
     info_flag = True
+    valid_sv = ["DEL", "DUP", "INS"]
     with open(file_path,"r") as f:
         for line in f:
             if line.startswith('##INFO') and info_flag:
@@ -51,7 +52,9 @@ def main():
                 info_dict = list_to_dict(record[7],'=')
                 info_dict['SVORI'] = info_dict['SVTYPE']
                 fine = info_dict['SVTYPE'][0:3]
-                if fine =="DUP":
+                if fine not in valid_sv:
+                    continue
+                if fine == "DUP":
                     fine="INS"
                 info_dict['SVTYPE'] = fine
 
