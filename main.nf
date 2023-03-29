@@ -94,26 +94,7 @@ process BREAKDANCER {
         prefix = "${bam.simpleName}.breakdancer"
 
         '''
-        # read the sample name from bam
-        SAMPLE=$(samtools samples !{bam}|head -n 1|cut -f1)
-        # create the config file for breakdancer max
-        bam2cfg.pl -g !{bam} > "!{prefix}.cfg"
-        # run brakdancer max with "-h" to print alle frequency column
-        breakdancer-max -h "!{prefix}.cfg" > "!{prefix}.ctx"
-        # convert the ctx output to vcf - Only taking DEL and INS in consideration
-        breakdancertovcf.py -o "!{prefix}.raw.vcf" !{ref} "!{prefix}.ctx"
-        # Save the header of the vcf
-        grep "^#" "!{prefix}.raw.vcf" > "!{prefix}.unsorted.vcf"
-        # then add the ID: just enumerate from 1...
-        grep -v "^#" "!{prefix}.raw.vcf"| awk 'BEGIN{OFS="\t"};{$3=NR; print $0}'>> "!{prefix}.unsorted.vcf"
-        # sort the vcf file 
-        cat "!{prefix}.unsorted.vcf" | awk '\$1 ~ /^#/ {print \$0;next} {print \$0 | "sort -k1,1 -k2,2n"}' > "!{prefix}.sorted.vcf"
-        # compress, index and filter to save regions in the bed file
-        bgzip "!{prefix}.sorted.vcf"
-        tabix -p vcf "!{prefix}.sorted.vcf.gz"
-        bcftools view -R !{bed} -Ov -o "!{prefix}.vcf" "!{prefix}.sorted.vcf.gz"
-        # edit the vcf to add the sample name 
-        sed -i -E "s/(#CHROM.+FORMAT\t).+/\1BD_${SAMPLE}/" "!{prefix}.vcf"
+        run_breakdancer.sh !{bam} !{ref} !{bed} !{prefix}
         '''
 
 }
@@ -136,14 +117,7 @@ process DELLY {
         outfile = "${bam.simpleName}.delly.vcf"
 
         '''
-        # read the sample name from bam
-        SAMPLE=$(samtools samples !{bam}|head -n 1|cut -f1)
-    
-        delly call!{my_bed} -t ALL -g !{ref} -o delly_output.bcf !{bam}
-        bcftools view -Ov -o !{outfile} delly_output.bcf 
-
-        # edit the vcf to add the sample name 
-        sed -i -E "s/(#CHROM.+FORMAT\t).+/\1DL_${SAMPLE}/" !{outfile}
+        run_delly.sh !{bam} !{ref} "!{my_bed}" "!{outfile}"
         '''
 
 }
@@ -167,16 +141,7 @@ process LUMPY {
         outfile = "${bam.simpleName}.lumpy.vcf"
 
         '''
-        # read the sample name from bam
-        SAMPLE=$(samtools samples !{bam}|head -n 1|cut -f1)
-
-        smoove call -x --genotype --name !{prefix} --outdir . -f !{ref} --processes !{task.cpus}!{my_bed} !{bam}
-        bgzip -d *genotyped.vcf.gz
-        mv *genotyped.vcf !{outfile}
-
-        # edit the vcf to add the sample name 
-        sed -i -E "s/(#CHROM.+FORMAT\t).+/\1LP_${SAMPLE}/" !{outfile}
-        
+        run_lumpy.sh !{bam} !{ref} !{outfile} !{prefix} !{task.cpus} "!{my_bed}"          
         
         '''
 
@@ -200,23 +165,11 @@ process MANTA {
         outfile = "${bam.simpleName}.manta.vcf"
 
         '''
-        # read the sample name from bam
-        SAMPLE=$(samtools samples !{bam}|head -n 1|cut -f1)
-
-        MEMORY="!{task.memory}"
-        MEM=${MEMORY/ GB/}
-        configManta.py --bam !{bam} --referenceFasta !{ref} --runDir ./!{my_bed}
-        ./runWorkflow.py -j !{task.cpus} -g $MEM
-        cp results/variants/diploidSV.vcf.gz .
-        bgzip -d diploidSV.vcf.gz
-        mv diploidSV.vcf !{outfile}
-
-        # edit the vcf to add the sample name 
-        sed -i -E "s/(#CHROM.+FORMAT\t).+/\1MT_${SAMPLE}/" !{outfile}
+        run_manta.sh !{bam} !{ref} !{outfile} "!{task.memory}" !{task.cpus} "!{my_bed}"
         '''
 
 }
-
+//here update parameters
 process PINDEL_SINGLE {
     
     publishDir "$params.results/pindel"  
@@ -228,14 +181,14 @@ process PINDEL_SINGLE {
         each chr
 
     output:
-        file "*.vcf"
+        file "*.pindel.vcf"
 
     shell:
 
         my_bed = bed ? " --exclude $bed" : ""
         fileName = bam.name
         fileSimpleName = bam.simpleName
-        outfile = "${fileSimpleName}.pindel.${chr}.vcf"
+        outfile = "${fileSimpleName}.${chr}"
 
         '''
         # read the sample name from bam
@@ -246,10 +199,11 @@ process PINDEL_SINGLE {
         INSER=${INSERT%.*}
         echo -e !{fileName}"\t$INSER\t"PD_${SAMPLE} > pindel_config.txt
         pindel -N -M 3 -r false -T !{task.cpus} -f !{ref} -i pindel_config.txt -c !{chr} -o !{fileSimpleName}!{my_bed}
-        pindel2vcf -P !{fileSimpleName} -is 50 -e 3 -r !{ref} -R GRCH37 -d `date +'%m/%d/%Y'` -v !{outfile}
-        bgzip !{outfile}
-        tabix -p vcf "!{outfile}.gz"
-        bcftools norm -f !{ref} -Ov -o !{outfile} "!{outfile}.gz"
+        pindel2vcf -P !{fileSimpleName} -is 50 -e 3 -r !{ref} -R GRCH38 -d `date +'%m/%d/%Y'` -v "!{outfile}.raw.vcf"
+        bgzip "!{outfile}.raw.vcf"
+        tabix -p vcf "!{outfile}.raw.vcf.gz"
+        bcftools norm -f !{ref} -Ov -o "!{outfile}.norm.vcf" "!{outfile}.raw.vcf.gz"
+        cat "!{outfile}.norm.vcf" | awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1V -k2,2n"}' > "!{outfile}.pindel.vcf"
         '''
 
 }
@@ -270,8 +224,9 @@ process MERGE_PINDEL_SINGLE {
         for f in $(ls *.vcf); do bgzip $f;tabix -p vcf "${f}.gz";done
         bcftools concat -Ov -o "${f%%.*}.pindel.unsorted.vcf" *.vcf.gz
         bcftools sort -Ov -o "${f%%.*}.pindel.raw.vcf" "${f%%.*}.pindel.unsorted.vcf"
+        cat "${f%%.*}.pindel.unsorted.vcf" | awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1V -k2,2n"}' > "${f%%.*}.pindel.raw.vcf"
         grep "^#" "${f%%.*}.pindel.raw.vcf" > "${f%%.*}.pindel.vcf"
-        grep -v "^#" "${f%%.*}.pindel.raw.vcf"| awk 'BEGIN{OFS="\t"};{$3=NR; print $0}'>> "${f%%.*}.pindel.vcf"
+        grep -v "^#" "${f%%.*}.pindel.raw.vcf"| awk 'BEGIN{OFS="\t"};{$3="PD_"NR; print $0}'>> "${f%%.*}.pindel.vcf"
 
         '''
 
@@ -320,10 +275,7 @@ process TARDIS {
         outfile = "${bam.baseName}"
 
         '''
-        tardis -i !{bam} --ref !{ref} --sonic !{sonic} --out !{outfile}!{my_bed}
-        cat "!{outfile}.vcf" | awk '\$1 ~ /^#/ {print \$0;next} {print \$0 | "sort -k1,1 -k2,2n"}' > "!{outfile}.tardis.vcf"
-        # edit the vcf to add the sample name 
-        sed -i -E "s/(#CHROM.+FORMAT\t)(.+)/\1TD_\2/" "!{outfile}.tardis.vcf"
+        run_tardis.sh !{bam} !{ref} !{sonic} !{outfile} "!{my_bed}"
 
         '''
 
@@ -351,9 +303,9 @@ process SURVIVOR_MERGE {
 
         '''
         # Edit DUP to INS and ignore other sv than DEL DUP & INS
-        for f in $(ls *.vcf);do edit_svtype.py $f "${f%.*}.edit.vcf";done
+        for f in $(ls *.vcf);do edit_svtype.py $f "${f%.*}.edit.vcf";awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1V -k2,2n"}' "${f%.*}.edit.vcf" > "${f%.*}.edit.sort.vcf";done
 
-        for f in $(ls *.edit.vcf);do echo $f >> files.txt;done
+        for f in $(ls *.edit.sort.vcf);do echo $f >> files.txt;done
         SURVIVOR merge files.txt 0.9 1 1 0 0 50 merge.new.vcf &> survivor.log
         cat merge.new.vcf | awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1 -k2,2n"}' > "!{outfile}.survivor.raw.vcf"
         bgzip "!{outfile}.survivor.raw.vcf"
@@ -378,11 +330,12 @@ workflow {
         MANTA (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
         BREAKDANCER (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
     }
-    
+    METRICS (BAM_INDEX.out, REFERENCE_INDEX.out)
     DELLY (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
     LUMPY (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
     if (params.pd_multi){
-        chromosomes = Channel.of(1..22)
+        //chromosomes = Channel.of(1..22,"X")
+        chromosomes = Channel.of(1..22).map{"chr${it}"}
         PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed, chromosomes)
         MERGE_PINDEL_SINGLE(PINDEL_SINGLE.out.collect())
     } else{
