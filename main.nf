@@ -57,7 +57,7 @@ process BAM_INDEX {
 
 process METRICS {
     
-    publishDir "$params.results/metrics" 
+    publishDir "$params.results/metrics", mode: "copy"  
 
     input:
         tuple path(bam),path(bam_index)
@@ -79,7 +79,7 @@ process METRICS {
 
 process BREAKDANCER {
     
-    publishDir "$params.results/standalone" 
+    publishDir "$params.results/standalone", mode: "copy"
 
     input:
         tuple path(bam),path(bam_index)
@@ -101,7 +101,7 @@ process BREAKDANCER {
 
 process DELLY {
     
-    publishDir "$params.results/standalone" 
+    publishDir "$params.results/standalone", mode: "copy" 
 
     input:
         tuple path(bam),path(bam_index)
@@ -124,7 +124,7 @@ process DELLY {
 
 process LUMPY {
     
-    publishDir "$params.results/standalone" 
+    publishDir "$params.results/standalone", mode: "copy" 
 
     input:
         tuple path(bam),path(bam_index)
@@ -149,7 +149,7 @@ process LUMPY {
 
 process MANTA {
     
-    publishDir "$params.results/standalone"
+    publishDir "$params.results/standalone", mode: "copy"
 
     input:
         tuple path(bam), path(bam_index)
@@ -172,7 +172,7 @@ process MANTA {
 //here update parameters
 process PINDEL_SINGLE {
     
-    publishDir "$params.results/pindel"  
+    publishDir "$params.results/pindel", mode: "copy"  
 
     input:
         tuple path(bam),path(bam_index)
@@ -210,7 +210,7 @@ process PINDEL_SINGLE {
 
 process MERGE_PINDEL_SINGLE {
     
-    publishDir "$params.results/standalone" 
+    publishDir "$params.results/standalone", mode: "copy" 
 
     input:
         path vcfs
@@ -221,6 +221,7 @@ process MERGE_PINDEL_SINGLE {
     shell:
 
         '''
+        # compress, index, concat and sort. Then add IDs 
         for f in $(ls *.vcf); do bgzip $f;tabix -p vcf "${f}.gz";done
         bcftools concat -Ov -o "${f%%.*}.pindel.unsorted.vcf" *.vcf.gz
         bcftools sort -Ov -o "${f%%.*}.pindel.raw.vcf" "${f%%.*}.pindel.unsorted.vcf"
@@ -231,7 +232,7 @@ process MERGE_PINDEL_SINGLE {
         '''
 
 }
-
+//To Delete
 process TARDIS_PREP {
     
     //publishDir "$params.results" 
@@ -258,7 +259,7 @@ process TARDIS_PREP {
 
 process TARDIS {
     
-    publishDir "$params.results/standalone" 
+    publishDir "$params.results/standalone", mode: "copy" 
 
     input:
         tuple path(bam), path(bam_index)
@@ -283,7 +284,7 @@ process TARDIS {
 
 process SURVIVOR_MERGE {
     
-    publishDir "$params.results/merge" 
+    publishDir "$params.results/merge", mode: "copy" 
 
     input:
         path breakdancer
@@ -334,8 +335,8 @@ workflow {
     DELLY (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
     LUMPY (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
     if (params.pd_multi){
-        //chromosomes = Channel.of(1..22,"X")
-        chromosomes = Channel.of(1..22).map{"chr${it}"}
+        chromosomes = Channel.of(1..22,"X")
+        //chromosomes = Channel.of(1..22).map{"chr${it}"}
         PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed, chromosomes)
         MERGE_PINDEL_SINGLE(PINDEL_SINGLE.out.collect())
     } else{
@@ -343,7 +344,7 @@ workflow {
         PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed, chromosomes)
     }
     
-    TARDIS_PREP (BAM_INDEX.out)
-    TARDIS(TARDIS_PREP.out, REFERENCE_INDEX.out, params.sonic_file, params.bed)
+    //TARDIS_PREP (BAM_INDEX.out)
+    TARDIS(BAM_INDEX.out, REFERENCE_INDEX.out, params.sonic_file, params.bed)
     SURVIVOR_MERGE(BREAKDANCER.out, DELLY.out, LUMPY.out, MANTA.out, MERGE_PINDEL_SINGLE.out, TARDIS.out)
 }
