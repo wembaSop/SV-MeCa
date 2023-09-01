@@ -67,7 +67,7 @@ process METRICS {
         path "*.metrics"
 
     shell:
-        outfile = "${bam.baseName}.metrics"
+        outfile = "${bam.simpleName}.metrics"
         '''
         MEMORY="!{task.memory}"
         MEM=${MEMORY/ GB/G}
@@ -273,7 +273,7 @@ process TARDIS {
     shell:
 
         my_bed = bed ? " --gaps $bed" : "" 
-        outfile = "${bam.baseName}"
+        outfile = "${bam.simpleName}"
 
         '''
         run_tardis.sh !{bam} !{ref} !{sonic} !{outfile} "!{my_bed}"
@@ -311,7 +311,7 @@ process SURVIVOR_MERGE {
         cat merge.new.vcf | awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1 -k2,2n"}' > "!{outfile}.survivor.raw.vcf"
         bgzip "!{outfile}.survivor.raw.vcf"
         tabix -p vcf "!{outfile}.survivor.raw.vcf.gz"
-        bcftools view -i'SVLEN<=-50 | SVLEN>=50' -Ov -o "!{outfile}.survivor.vcf" "!{outfile}.survivor.raw.vcf.gz"
+        bcftools view -i 'SVLEN<=-50 | SVLEN>=50' -Ov -o "!{outfile}.survivor.vcf" "!{outfile}.survivor.raw.vcf.gz"
 
         '''
 
@@ -323,6 +323,7 @@ workflow {
     
     REFERENCE_INDEX (params.reference)
     BAM_INDEX (params.input)
+
     if (params.bed) {
         INCLUDE_REGIONS(BAM_INDEX.out, params.bed)  
         MANTA (BAM_INDEX.out, REFERENCE_INDEX.out, INCLUDE_REGIONS.out)
@@ -331,9 +332,11 @@ workflow {
         MANTA (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
         BREAKDANCER (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
     }
+
     METRICS (BAM_INDEX.out, REFERENCE_INDEX.out)
     DELLY (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
     LUMPY (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
+
     if (params.pd_multi){
         chromosomes = Channel.of(1..22,"X")
         //chromosomes = Channel.of(1..22).map{"chr${it}"}
@@ -343,8 +346,13 @@ workflow {
         chromosomes = Channel.of("ALL")
         PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed, chromosomes)
     }
+
+    if (params.enable_markdup){
+        TARDIS_PREP (BAM_INDEX.out)
+        TARDIS(TARDIS_PREP.out, REFERENCE_INDEX.out, params.sonic_file, params.bed)
+    } else {
+        TARDIS(BAM_INDEX.out, REFERENCE_INDEX.out, params.sonic_file, params.bed)
+    }
     
-    //TARDIS_PREP (BAM_INDEX.out)
-    TARDIS(BAM_INDEX.out, REFERENCE_INDEX.out, params.sonic_file, params.bed)
     SURVIVOR_MERGE(BREAKDANCER.out, DELLY.out, LUMPY.out, MANTA.out, MERGE_PINDEL_SINGLE.out, TARDIS.out)
 }

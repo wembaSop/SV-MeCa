@@ -64,7 +64,7 @@ dependencies:
   - perl-math-cdf=0.1=pl5321h031d066_9
   - perl-statistics-descriptive=3.0801=pl5321hdfd78af_0
   - pindel=0.2.5b9=h84372a0_10
-  - samtools=1.16.1=h00cdaf9_2
+  - samtools=1.17=hd87286a_1
   - xz=5.2.6=h166bdaf_0
   - zlib=1.2.13=hd590300_5
   - zstd=1.5.2=hfc55251_7
