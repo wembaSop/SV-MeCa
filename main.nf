@@ -1,6 +1,10 @@
+//support alignment
+//support CRAM input
+// support VCF inputs
+
 process REFERENCE_INDEX {
     
-    //publishDir "$params.results/reference_index" 
+    publishDir "$params.results/reference_index", enabled:false 
 
     input:
         path ref
@@ -13,6 +17,10 @@ process REFERENCE_INDEX {
         '''
         samtools faidx !{ref}
         '''
+    stub:
+        """
+        samtools version > test.fa.fai
+        """
 
 }
 
@@ -28,12 +36,20 @@ process INCLUDE_REGIONS {
     shell:
 
         '''
-        samtools view -H !{bam}| grep "^@SQ"| awk -F '[\t:]' '{print $3"\t"0"\t"$5}'> full.bed
+        samtools view -H !{bam}| grep "^@SQ"| cut -f 2-3|sed -e 's/SN://g' -e 's/LN://g'|awk '{print $1"\t"0"\t"$2}'> full.bed
         bedtools subtract -a full.bed -b !{bed} > include.bed
         bgzip include.bed
         tabix -p bed include.bed.gz
 
         '''
+    stub:
+        """
+        samtools version > full.bed
+        bedtools --version > include.bed
+        bgzip --version > include.bed.gz
+        tabix --version > include.bed.gz.tbi
+
+        """
 
 }
 
@@ -52,7 +68,10 @@ process BAM_INDEX {
         '''
         samtools index -@!{task.cpus} !{bam}
         '''
-
+    stub:
+        """
+        samtools version > test.bam.bai
+        """
 }
 
 process METRICS {
@@ -75,6 +94,17 @@ process METRICS {
         gatk --java-options "-Xmx$MEM" CollectWgsMetrics -I !{bam} -R !{ref} -O !{outfile}
         '''
 
+    stub:
+
+        outfile = "${bam.simpleName}.metrics"
+    
+        """
+        MEMORY="${task.memory}"
+        MEM=\${MEMORY/ GB/G}
+        echo "RUNNING gatk --java-options "-Xmx\$MEM" CollectWgsMetrics -I ${bam} -R ${ref} -O ${outfile}" > $outfile
+        gatk CollectWgsMetrics --version >> $outfile
+        """
+
 }
 
 process BREAKDANCER {
@@ -96,6 +126,21 @@ process BREAKDANCER {
         '''
         run_breakdancer.sh !{bam} !{ref} !{bed} !{prefix}
         '''
+    stub:
+
+        prefix = "${bam.simpleName}.breakdancer"
+
+        """
+        touch "${prefix}.cfg"
+        touch "${prefix}.ctx"
+        breakdancertovcf.py -h > "${prefix}.raw.vcf"
+        grep -V > "${prefix}.unsorted.vcf"
+        awk -V >> "${prefix}.unsorted.vcf"
+        bgzip --version > "${prefix}.vcf.gz"
+        tabix --version > "${prefix}.vcf.gz.zbi"
+        bcftools -v > "${prefix}.vcf"
+        sed --version >> "${prefix}.vcf"
+        """
 
 }
 
@@ -119,6 +164,46 @@ process DELLY {
         '''
         run_delly.sh !{bam} !{ref} "!{my_bed}" "!{outfile}"
         '''
+    stub:
+
+        my_bed = bed ? " -x $bed" : "" 
+        outfile = "${bam.simpleName}.delly.vcf"
+
+        """
+        delly --help > $outfile
+        bcftools -v >> ${outfile}
+        sed --version >> ${outfile}
+        """
+
+}
+
+process INSURVEYOR {
+    
+    publishDir "$params.results/standalone", mode: "copy" 
+
+    input:
+        tuple path(bam),path(bam_index)
+        tuple path(ref),path(ref_index)
+        tuple path(bed), path(bed_i)
+
+    output:
+        file "*insurveyor.vcf"
+
+    shell:
+        outfile = "${bam.simpleName}.insurveyor.vcf"
+
+        '''
+        SAMPLE=$(samtools samples !{bam}|head -n 1|cut -f1)
+        insurveyor.py --threads !{task.cpus} --samplename "IS_${SAMPLE}" --min-insertion-size 50 !{bam} $PWD !{ref}
+        bcftools view -R !{bed} -Ov -o !{outfile} out.vcf.gz
+        '''
+    stub:
+        outfile = "${bam.simpleName}.insurveyor.vcf"
+        """
+        insurveyor.py -h &> $outfile
+        bcftools -v >> $outfile
+        sed --version >> $outfile
+        """
 
 }
 
@@ -144,6 +229,16 @@ process LUMPY {
         run_lumpy.sh !{bam} !{ref} !{outfile} !{prefix} !{task.cpus} "!{my_bed}"          
         
         '''
+    stub:
+
+        my_bed = bed ? " --exclude $bed" : "" 
+        prefix = bam.simpleName
+        outfile = "${bam.simpleName}.lumpy.vcf"
+
+        """
+        smoove call --help > file.lumpy.vcf
+
+        """
 
 }
 
@@ -167,6 +262,11 @@ process MANTA {
         '''
         run_manta.sh !{bam} !{ref} !{outfile} "!{task.memory}" !{task.cpus} "!{my_bed}"
         '''
+    stub:
+
+        """
+        touch file.manta.vcf
+        """
 
 }
 //here update parameters
@@ -205,6 +305,14 @@ process PINDEL_SINGLE {
         bcftools norm -f !{ref} -Ov -o "!{outfile}.norm.vcf" "!{outfile}.raw.vcf.gz"
         cat "!{outfile}.norm.vcf" | awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1V -k2,2n"}' > "!{outfile}.pindel.vcf"
         '''
+    stub:
+        my_bed = bed ? " --exclude $bed" : ""
+        fileName = bam.name
+        fileSimpleName = bam.simpleName
+        outfile = "${fileSimpleName}.${chr}"
+        """
+        touch "${outfile}.pindel.vcf"
+        """
 
 }
 
@@ -230,6 +338,10 @@ process MERGE_PINDEL_SINGLE {
         grep -v "^#" "${f%%.*}.pindel.raw.vcf"| awk 'BEGIN{OFS="\t"};{$3="PD_"NR; print $0}'>> "${f%%.*}.pindel.vcf"
 
         '''
+    stub:
+        """
+        touch file.pindel.vcf
+        """
 
 }
 //To Delete
@@ -254,6 +366,11 @@ process TARDIS_PREP {
         samtools index -@!{task.cpus} !{outfile}
 
         '''
+    stub:
+        """
+        touch file.markdup.bam
+        touch file.markdup.bam.bai
+        """
 
 }
 
@@ -272,13 +389,19 @@ process TARDIS {
 
     shell:
 
-        my_bed = bed ? " --gaps $bed" : "" 
+        my_bed = bed ? " --gaps $bed" : " " 
         outfile = "${bam.simpleName}"
 
         '''
         run_tardis.sh !{bam} !{ref} !{sonic} !{outfile} "!{my_bed}"
 
         '''
+
+    stub:
+
+        """
+        touch file.tardis.vcf
+        """
 
 }
 
@@ -289,6 +412,7 @@ process SURVIVOR_MERGE {
     input:
         path breakdancer
         path delly
+        path insurveyor
         path lumpy
         path manta
         path pindel
@@ -315,6 +439,12 @@ process SURVIVOR_MERGE {
 
         '''
 
+    stub:
+    
+        """
+        touch file.survivor.vcf
+        """
+
 }
 
 
@@ -328,18 +458,20 @@ workflow {
         INCLUDE_REGIONS(BAM_INDEX.out, params.bed)  
         MANTA (BAM_INDEX.out, REFERENCE_INDEX.out, INCLUDE_REGIONS.out)
         BREAKDANCER (BAM_INDEX.out, REFERENCE_INDEX.out, INCLUDE_REGIONS.out)
+        INSURVEYOR (BAM_INDEX.out, REFERENCE_INDEX.out, INCLUDE_REGIONS.out)
     } else {
         MANTA (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
         BREAKDANCER (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
+        INSURVEYOR (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
     }
-
+    
     METRICS (BAM_INDEX.out, REFERENCE_INDEX.out)
     DELLY (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
     LUMPY (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
 
     if (params.pd_multi){
-        chromosomes = Channel.of(1..22,"X")
-        //chromosomes = Channel.of(1..22).map{"chr${it}"}
+        //chromosomes = Channel.of(1..22,"X")
+        chromosomes = Channel.of(1..22).map{"${it}"}
         PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed, chromosomes)
         MERGE_PINDEL_SINGLE(PINDEL_SINGLE.out.collect())
     } else{
@@ -349,10 +481,10 @@ workflow {
 
     if (params.enable_markdup){
         TARDIS_PREP (BAM_INDEX.out)
-        TARDIS(TARDIS_PREP.out, REFERENCE_INDEX.out, params.sonic_file, params.bed)
+        TARDIS(TARDIS_PREP.out, REFERENCE_INDEX.out, params.sonic, params.bed)
     } else {
-        TARDIS(BAM_INDEX.out, REFERENCE_INDEX.out, params.sonic_file, params.bed)
+        TARDIS(BAM_INDEX.out, REFERENCE_INDEX.out, params.sonic, params.bed)
     }
     
-    SURVIVOR_MERGE(BREAKDANCER.out, DELLY.out, LUMPY.out, MANTA.out, MERGE_PINDEL_SINGLE.out, TARDIS.out)
+    SURVIVOR_MERGE(BREAKDANCER.out, DELLY.out, INSURVEYOR.out, LUMPY.out, MANTA.out, MERGE_PINDEL_SINGLE.out, TARDIS.out)
 }
