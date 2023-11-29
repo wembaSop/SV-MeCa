@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -Eeuo pipefail
 BAM=$1
 REF=$2
 OUTFILE=$3
