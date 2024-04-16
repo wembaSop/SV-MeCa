@@ -23,3 +23,5 @@ run.sh
 run.log
 data/hg19.bed
 bin/create_matrix.py
+bin/tardis_latest.img
+.gitignore
