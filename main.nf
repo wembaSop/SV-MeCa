@@ -2,9 +2,11 @@
 //support CRAM input
 // support VCF inputs
 
+PUBLISH = "$params.results"
+
 process REFERENCE_INDEX {
     
-    publishDir "$params.results/reference_index", enabled:false 
+    publishDir "$PUBLISH/reference_index", enabled:false 
 
     input:
         path ref
@@ -55,7 +57,7 @@ process INCLUDE_REGIONS {
 
 process BAM_INDEX {
     
-    //publishDir "$params.results/bam_index" 
+    //publishDir "$PUBLISH/bam_index" 
 
     input:
         path bam
@@ -76,22 +78,26 @@ process BAM_INDEX {
 
 process METRICS {
     
-    publishDir "$params.results/metrics", mode: "copy"  
+    publishDir "$PUBLISH/metrics", mode: "copy"  
 
     input:
         tuple path(bam),path(bam_index)
         tuple path(ref),path(ref_index)
+        path cfg
 
     output:
-        path "*.metrics"
+        path "*.metrics", emit: metrics
+        path "*.stats", emit: stats
 
     shell:
-        outfile = "${bam.simpleName}.metrics"
+        outfile = "${bam.simpleName}"
         '''
         MEMORY="!{task.memory}"
         MEM=${MEMORY/ GB/G}
-        echo "RUNNING gatk --java-options "-Xmx$MEM" CollectWgsMetrics -I !{bam} -R !{ref} -O !{outfile}"
-        gatk --java-options "-Xmx$MEM" CollectWgsMetrics -I !{bam} -R !{ref} -O !{outfile}
+        echo "RUNNING gatk --java-options "-Xmx$MEM" CollectWgsMetrics -I !{bam} -R !{ref} -O !{outfile}.metrics"
+        gatk --java-options "-Xmx$MEM" CollectWgsMetrics -I !{bam} -R !{ref} -O "!{outfile}.metrics"
+        echo "readlen=$(grep 'readgroup' !{cfg} | head -n 1 | cut -f 4 |cut -d ':' -f 2)" >> "!{outfile}.metrics.stats"
+        echo "coverage=$(head -n 8 !{outfile}.metrics |tail -n1 |cut -f 2)" >> "!{outfile}.metrics.stats"
         '''
 
     stub:
@@ -109,7 +115,7 @@ process METRICS {
 
 process BREAKDANCER {
     
-    publishDir "$params.results/standalone", mode: "copy"
+    publishDir "$PUBLISH/standalone", mode: "copy"
 
     input:
         tuple path(bam),path(bam_index)
@@ -117,7 +123,8 @@ process BREAKDANCER {
         tuple path(bed), path(bed_i) //regions to include
 
     output:
-        file "*breakdancer.vcf"
+        path "*breakdancer.vcf", emit: vcf
+        path "*breakdancer.cfg", emit: cfg
         
     shell:
 
@@ -146,7 +153,7 @@ process BREAKDANCER {
 
 process DELLY {
     
-    publishDir "$params.results/standalone", mode: "copy" 
+    publishDir "$PUBLISH/standalone", mode: "copy" 
 
     input:
         tuple path(bam),path(bam_index)
@@ -154,7 +161,7 @@ process DELLY {
         path bed 
 
     output:
-        file "*delly.vcf"
+        path "*delly.vcf"
 
     shell:
 
@@ -179,15 +186,15 @@ process DELLY {
 
 process INSURVEYOR {
     
-    publishDir "$params.results/standalone", mode: "copy" 
+    publishDir "$PUBLISH/standalone", mode: "copy" 
 
     input:
-        tuple path(bam),path(bam_index)
-        tuple path(ref),path(ref_index)
+        tuple path(bam), path(bam_index)
+        tuple path(ref), path(ref_index)
         tuple path(bed), path(bed_i)
 
     output:
-        file "*insurveyor.vcf"
+        path "*insurveyor.vcf"
 
     shell:
         outfile = "${bam.simpleName}.insurveyor.vcf"
@@ -209,7 +216,7 @@ process INSURVEYOR {
 
 process LUMPY {
     
-    publishDir "$params.results/standalone", mode: "copy" 
+    publishDir "$PUBLISH/standalone", mode: "copy" 
 
     input:
         tuple path(bam),path(bam_index)
@@ -217,7 +224,7 @@ process LUMPY {
         path bed
 
     output:
-        file "*lumpy.vcf"
+        path "*lumpy.vcf"
 
     shell:
 
@@ -244,7 +251,7 @@ process LUMPY {
 
 process MANTA {
     
-    publishDir "$params.results/standalone", mode: "copy"
+    publishDir "$PUBLISH/standalone", mode: "copy"
 
     input:
         tuple path(bam), path(bam_index)
@@ -252,7 +259,7 @@ process MANTA {
         tuple path(bed), path(bed_i) //regions to include
 
     output:
-        file "*manta.vcf"
+        path "*manta.vcf"
 
     shell:
 
@@ -272,7 +279,7 @@ process MANTA {
 //here update parameters
 process PINDEL_SINGLE {
     
-    publishDir "$params.results/pindel", mode: "copy"  
+    publishDir "$PUBLISH/pindel", mode: "copy"  
 
     input:
         tuple path(bam),path(bam_index)
@@ -281,7 +288,7 @@ process PINDEL_SINGLE {
         each chr
 
     output:
-        file "*.pindel.vcf"
+        path "*.pindel.vcf"
 
     shell:
 
@@ -318,13 +325,13 @@ process PINDEL_SINGLE {
 
 process MERGE_PINDEL_SINGLE {
     
-    publishDir "$params.results/standalone", mode: "copy" 
+    publishDir "$PUBLISH/standalone", mode: "copy" 
 
     input:
         path vcfs
 
     output:
-        file "*.pindel.vcf"
+        path "*.pindel.vcf"
 
     shell:
 
@@ -347,7 +354,7 @@ process MERGE_PINDEL_SINGLE {
 //To Delete
 process TARDIS_PREP {
     
-    //publishDir "$params.results" 
+    //publishDir "$PUBLISH" 
 
     input:
         tuple path(bam),path(bam_index)
@@ -376,7 +383,7 @@ process TARDIS_PREP {
 
 process TARDIS {
     
-    publishDir "$params.results/standalone", mode: "copy" 
+    publishDir "$PUBLISH/standalone", mode: "copy" 
 
     input:
         tuple path(bam), path(bam_index)
@@ -385,7 +392,7 @@ process TARDIS {
         path bed 
 
     output:
-        file "*.tardis.vcf"
+        path "*.tardis.vcf"
 
     shell:
 
@@ -407,7 +414,7 @@ process TARDIS {
 
 process SURVIVOR_MERGE {
     
-    publishDir "$params.results/merge", mode: "copy" 
+    publishDir "$PUBLISH/merge", mode: "copy" 
 
     input:
         path breakdancer
@@ -417,9 +424,19 @@ process SURVIVOR_MERGE {
         path manta
         path pindel
         path tardis
+        path stats
 
     output:
-        file "*.survivor.vcf"
+        path "*.survivor.vcf", emit: survivor
+        path "*.breakdancer.edit.sort.vcf", emit: breakdancer
+        path "*.delly.edit.sort.vcf", emit: delly
+        path "*.insurveyor.edit.sort.vcf", emit: insurveyor
+        path "*.lumpy.edit.sort.vcf", emit: lumpy
+        path "*.manta.edit.sort.vcf", emit: manta
+        path "*.pindel.edit.sort.vcf", emit: pindel
+        path "*.tardis.edit.sort.vcf", emit: tardis
+        path "*.stats", emit: stats
+
 
     shell:
 
@@ -427,8 +444,9 @@ process SURVIVOR_MERGE {
         outfile = "${delly.simpleName}"
 
         '''
+        cp !{stats} "!{outfile}.stats"
         # Edit DUP to INS and ignore other sv than DEL DUP & INS
-        for f in $(ls *.vcf);do edit_svtype.py $f "${f%.*}.edit.vcf";awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1V -k2,2n"}' "${f%.*}.edit.vcf" > "${f%.*}.edit.sort.vcf";done
+        for f in $(ls *.vcf);do tool=${i#*.}; echo "${tool%%.*}=$(grep -cv "^#" $i)" >> "!{outfile}.stats"; edit_svtype.py $f "${f%.*}.edit.vcf";awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1V -k2,2n"}' "${f%.*}.edit.vcf" > "${f%.*}.edit.sort.vcf";done
 
         for f in $(ls *.edit.sort.vcf);do echo $f >> files.txt;done
         SURVIVOR merge files.txt 0.9 1 1 0 0 50 merge.new.vcf &> survivor.log
@@ -436,7 +454,7 @@ process SURVIVOR_MERGE {
         bgzip "!{outfile}.survivor.raw.vcf"
         tabix -p vcf "!{outfile}.survivor.raw.vcf.gz"
         bcftools view -i 'SVLEN<=-50 | SVLEN>=50' -Ov -o "!{outfile}.survivor.vcf" "!{outfile}.survivor.raw.vcf.gz"
-
+        echo "survivor=$(grep -cv "^#" !{outfile}.survivor.vcf)" >> "!{outfile}.stats"
         '''
 
     stub:
@@ -447,44 +465,146 @@ process SURVIVOR_MERGE {
 
 }
 
-
-
-workflow {
+process SCORING {
     
-    REFERENCE_INDEX (params.reference)
-    BAM_INDEX (params.input)
+    publishDir "$PUBLISH/scoring", mode: "copy" 
 
-    if (params.bed) {
-        INCLUDE_REGIONS(BAM_INDEX.out, params.bed)  
+    input:
+        path breakdancer
+        path delly
+        path insurveyor
+        path lumpy
+        path manta
+        path pindel
+        path tardis
+        path survivor
+        path model_del
+        path model_ins
+        path stats
+
+    output:
+        path "*.svmeca.vcf"
+
+    shell:
+
+        outfile = "${bam.simpleName}"
+
+        '''
+        sv_meca.py -o "!{outfile}.svmeca.raw.vcf" -s !{stats} -bd !{breakdancer} -dl !{delly} -is !{insurveyor} -lp !{lumpy} -mt !{manta} -pd !{pindel} -td !{tardis} -su !{survivor} !{model_ins} !{model_del}
+        awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1V -k2,2n"}' "!{outfile}.svmeca.raw.vcf" > "!{outfile}.svmeca.vcf"
+        '''
+
+    stub:
+
+        """
+        touch file.tardis.vcf
+        """
+
+}
+
+
+workflow sv_calling {
+    take:
+    bam_file
+    ref_file
+    bed_file
+    chr_wise
+    sonic
+    td_markdup
+
+    
+    main:
+    REFERENCE_INDEX (ref_file)
+    BAM_INDEX (bam_file)
+
+    if (bed_file) {
+        INCLUDE_REGIONS(BAM_INDEX.out, bed_file)  
         MANTA (BAM_INDEX.out, REFERENCE_INDEX.out, INCLUDE_REGIONS.out)
         BREAKDANCER (BAM_INDEX.out, REFERENCE_INDEX.out, INCLUDE_REGIONS.out)
         INSURVEYOR (BAM_INDEX.out, REFERENCE_INDEX.out, INCLUDE_REGIONS.out)
     } else {
-        MANTA (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
-        BREAKDANCER (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
-        INSURVEYOR (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
+        MANTA (BAM_INDEX.out, REFERENCE_INDEX.out, bed_file)
+        BREAKDANCER (BAM_INDEX.out, REFERENCE_INDEX.out, bed_file)
+        INSURVEYOR (BAM_INDEX.out, REFERENCE_INDEX.out, bed_file)
     }
     
-    METRICS (BAM_INDEX.out, REFERENCE_INDEX.out)
-    DELLY (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
-    LUMPY (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed)
+    METRICS (BAM_INDEX.out, REFERENCE_INDEX.out, BREAKDANCER.out.cfg)
+    DELLY (BAM_INDEX.out, REFERENCE_INDEX.out, bed_file)
+    LUMPY (BAM_INDEX.out, REFERENCE_INDEX.out, bed_file)
 
-    if (params.pd_multi){
+    if (chr_wise){
         //chromosomes = Channel.of(1..22,"X")
         chromosomes = Channel.of(1..22).map{"${it}"}
-        PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed, chromosomes)
-        MERGE_PINDEL_SINGLE(PINDEL_SINGLE.out.collect())
+        PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, bed_file, chromosomes)
+        MERGE_PINDEL_SINGLE (PINDEL_SINGLE.out.collect())
     } else{
         chromosomes = Channel.of("ALL")
-        PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, params.bed, chromosomes)
+        PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, bed_file, chromosomes)
     }
 
-    if (params.enable_markdup){
+    if (td_markdup){
         TARDIS_PREP (BAM_INDEX.out)
-        TARDIS(TARDIS_PREP.out, REFERENCE_INDEX.out, params.sonic, params.bed)
+        TARDIS (TARDIS_PREP.out, REFERENCE_INDEX.out, sonic, bed_file)
     } else {
-        TARDIS(BAM_INDEX.out, REFERENCE_INDEX.out, params.sonic, params.bed)
+        TARDIS (BAM_INDEX.out, REFERENCE_INDEX.out, sonic, bed_file)
     }
+
+    emit:
+    breakdancer = BREAKDANCER.out.vcf
+    delly = DELLY.out
+    insurveyor = INSURVEYOR.out
+    lumpy = LUMPY.out
+    manta = MANTA.out
+    pindel = MERGE_PINDEL_SINGLE.out
+    tardis = TARDIS.out
+    stats = METRICS.out.stats
+
+}
+
+workflow merge_score{
+    take: 
+    breakdancer
+    delly
+    insurveyor
+    lumpy
+    manta
+    pindel
+    tardis
+    model_del
+    model_ins
+    stats
+
+    main:
+    SURVIVOR_MERGE (breakdancer, delly, insurveyor, lumpy, manta, pindel, tardis, stats)
+    SCORING (SURVIVOR_MERGE.out.breakdancer, SURVIVOR_MERGE.out.delly, SURVIVOR_MERGE.out.insurveyor, SURVIVOR_MERGE.out.lumpy, SURVIVOR_MERGE.out.manta, SURVIVOR_MERGE.out.pindel, SURVIVOR_MERGE.out.tardis, SURVIVOR_MERGE.out.survivor, model_del, model_ins, SURVIVOR_MERGE.out.stats)
+
+    emit:
+    sv_meca_vcf = SCORING.out
+
+}
+
+workflow{
+    // Start from FASTQ files.  
+    if (params.format == "fastq"){
+        
+        //TO DO
+        println "TO DO FASTQ"
+
+    // Start from BAM files. 
+    } else if (params.format == "bam"){
+        
+        sv_calling(params.input, params.reference, params.bed, params.pd_multi, params.sonic, params.enable_markdup)
+        merge_score(sv_calling.out.breakdancer, sv_calling.out.delly, sv_calling.out.insurveyor, sv_calling.out.lumpy, sv_calling.out.manta, sv_calling.out.pindel, sv_calling.out.tardis, params.model_del, params.model_ins, sv_calling.out.stats)
     
-    SURVIVOR_MERGE(BREAKDANCER.out, DELLY.out, INSURVEYOR.out, LUMPY.out, MANTA.out, MERGE_PINDEL_SINGLE.out, TARDIS.out)
+    //start from VCF
+    } else if (params.format == "vcf"){
+
+       merge_score(params.breakdancer, params.delly, params.insurveyor, params.lumpy, params.manta, params.pindel, params.tardis, params.model_del, params.model_ins, params.stats)
+    
+    } else {
+
+        println "Provide the parameter format via --format or in the config file"
+    
+    }
+
 }
