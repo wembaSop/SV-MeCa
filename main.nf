@@ -446,7 +446,7 @@ process SURVIVOR_MERGE {
         '''
         cp !{stats} "!{outfile}.stats"
         # Edit DUP to INS and ignore other sv than DEL DUP & INS
-        for f in $(ls *.vcf);do tool=${i#*.}; echo "${tool%%.*}=$(grep -cv "^#" $i)" >> "!{outfile}.stats"; edit_svtype.py $f "${f%.*}.edit.vcf";awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1V -k2,2n"}' "${f%.*}.edit.vcf" > "${f%.*}.edit.sort.vcf";done
+        for f in $(ls *.vcf);do tool=${f#*.}; echo "${tool%%.*}=$(grep -cv "^#" $f)" >> "!{outfile}.stats"; edit_svtype.py $f "${f%.*}.edit.vcf";awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1V -k2,2n"}' "${f%.*}.edit.vcf" > "${f%.*}.edit.sort.vcf";done
 
         for f in $(ls *.edit.sort.vcf);do echo $f >> files.txt;done
         SURVIVOR merge files.txt 0.9 1 1 0 0 50 merge.new.vcf &> survivor.log
@@ -467,7 +467,7 @@ process SURVIVOR_MERGE {
 
 process SCORING {
     
-    publishDir "$PUBLISH/scoring", mode: "copy" 
+    publishDir "$PUBLISH/sv-meca", mode: "copy" 
 
     input:
         path breakdancer
@@ -487,7 +487,7 @@ process SCORING {
 
     shell:
 
-        outfile = "${bam.simpleName}"
+        outfile = "${delly.simpleName}"
 
         '''
         sv_meca.py -o "!{outfile}.svmeca.raw.vcf" -s !{stats} -bd !{breakdancer} -dl !{delly} -is !{insurveyor} -lp !{lumpy} -mt !{manta} -pd !{pindel} -td !{tardis} -su !{survivor} !{model_ins} !{model_del}
@@ -497,7 +497,7 @@ process SCORING {
     stub:
 
         """
-        touch file.tardis.vcf
+        touch file.svmeca.vcf
         """
 
 }

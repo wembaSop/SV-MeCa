@@ -37,7 +37,7 @@ def parse_stats(filename):
             tmp_line = line.strip().split("=")
             infos[tmp_line[0]] = tmp_line[1]
 
-    return int(infos["coverage"]), int(infos["readlen"])
+    return int(float(infos["coverage"])), int(float(infos["readlen"]))
 
 
 def main(my_args):
