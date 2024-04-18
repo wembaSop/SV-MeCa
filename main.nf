@@ -444,9 +444,9 @@ process SURVIVOR_MERGE {
         outfile = "${delly.simpleName}"
 
         '''
-        cp !{stats} "!{outfile}.stats"
+        cp !{stats} "!{outfile}.merge.stats"
         # Edit DUP to INS and ignore other sv than DEL DUP & INS
-        for f in $(ls *.vcf);do tool=${f#*.}; echo "${tool%%.*}=$(grep -cv "^#" $f)" >> "!{outfile}.stats"; edit_svtype.py $f "${f%.*}.edit.vcf";awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1V -k2,2n"}' "${f%.*}.edit.vcf" > "${f%.*}.edit.sort.vcf";done
+        for f in $(ls *.vcf);do tool=${f#*.}; echo "${tool%%.*}=$(grep -cv "^#" $f)" >> "!{outfile}.merge.stats"; edit_svtype.py $f "${f%.*}.edit.vcf";awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1V -k2,2n"}' "${f%.*}.edit.vcf" > "${f%.*}.edit.sort.vcf";done
 
         for f in $(ls *.edit.sort.vcf);do echo $f >> files.txt;done
         SURVIVOR merge files.txt 0.9 1 1 0 0 50 merge.new.vcf &> survivor.log
@@ -454,7 +454,7 @@ process SURVIVOR_MERGE {
         bgzip "!{outfile}.survivor.raw.vcf"
         tabix -p vcf "!{outfile}.survivor.raw.vcf.gz"
         bcftools view -i 'SVLEN<=-50 | SVLEN>=50' -Ov -o "!{outfile}.survivor.vcf" "!{outfile}.survivor.raw.vcf.gz"
-        echo "survivor=$(grep -cv "^#" !{outfile}.survivor.vcf)" >> "!{outfile}.stats"
+        echo "survivor=$(grep -cv "^#" !{outfile}.survivor.vcf)" >> "!{outfile}.merge.stats"
         '''
 
     stub:
@@ -588,7 +588,7 @@ workflow{
     if (params.format == "fastq"){
         
         //TO DO
-        println "TO DO FASTQ"
+        println "FASTQ COMING SOON"
 
     // Start from BAM files. 
     } else if (params.format == "bam"){
