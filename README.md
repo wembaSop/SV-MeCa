@@ -44,7 +44,7 @@ SV-MeCa is implemented as a nextflow workflow and available as docker container 
 
 ## Installation
 
-Installation of the [Docker Engine](https://docs.docker.com/engine/) is required to set up SV-MeCa.
+Installation of the [Docker Engine](https://docs.docker.com/engine/install/) is required to set up SV-MeCa.
 
 If Docker is installed, SV-MeCa can be fetched from Docker Hub [here](https://hub.docker.com/r/wembasop/sv-meca). 
 
