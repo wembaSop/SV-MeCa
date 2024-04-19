@@ -1,4 +1,4 @@
-# SV-MeCa: Structural Variant Meta Caller 
+# SV-MeCa: Structural Variant Meta-Caller 
 
 
 ## Introduction
