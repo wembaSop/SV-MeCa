@@ -103,7 +103,7 @@ docker run -v /your/directory/input/path:/input -v /your/directory/output/path:/
 
 **Hint:** Be aware of the correct use of quotation marks `"`.
 
-In VCF mode, the additional input file `stats.txt` is requried to provide information about mean sequencing coverage and read lengths. 
+In VCF mode, the additional input file `stats.txt` is required to provide information about mean sequencing coverage and read lengths. 
 
 [Example file](https://github.com/wembaSop/SV-MeCa/tree/master/Test/stats.txt) content:
 
