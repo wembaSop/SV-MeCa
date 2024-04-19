@@ -44,21 +44,15 @@ SV-MeCa is implemented as a nextflow workflow and available as docker container 
 
 ## Installation
 
-You only need the Docker engine installed to set up SV-MeCa. [see](https://docs.docker.com/engine/install/ubuntu/)
+Installation of the [Docker Engine](https://docs.docker.com/engine/) is required to set up SV-MeCa.
 
-If Docker is already installed, SV-MeCa can be fetched from Docker Hub: https://hub.docker.com/r/wembasop/sv-meca 
+If Docker is installed, SV-MeCa can be fetched from Docker Hub [here](https://hub.docker.com/r/wembasop/sv-meca). 
 
 ## Basic Usage
 
 ### Help
 
-The help of SV-MeCa give a gut overview of required files to run it.
-
-Use this command to see the help:
-
-`docker run wembasop/sv-meca:1.0 /workspace/SV-MeCa/run_svmeca.sh`
-
-output:
+The help of SV-MeCa (available via `docker run wembasop/sv-meca:1.0 /workspace/SV-MeCa/run_svmeca.sh`)  provides an overview of required input files:
 
 ```
 Usage: ./run_svmeca.sh <bam|vcf> [options]
@@ -86,31 +80,36 @@ General options:
     -no_chr <true|false>: Specify whether to include chr prefix (required)
     -extra <extra_value>: Extra nextflow options (optional)
 ```
-SV-MeCa support currently two type of data, BAM files and VCF files. 
+SV-MeCa supports two types of initial input data: BAM files and VCF files. 
 
-### For BAM files 
-For the excution of BAM files the command could look like this for an execution with the genome build hg38:
+### BAM Files 
+
+Example code for running SV-MeCa starting from BAM files and using reference genome build hg38:
 
 ```
 docker run -v /your/directory/input/path:/input -v /your/directory/output/path:/workspace/SV-MeCa/results wembasop/sv-meca:1.0 "/workspace/SV-MeCa/run_svmeca.sh bam -bam /input/yourbam.bam -ref /input/yourref.fasta -sample yoursamplename -build hg38 -no_chr true" 
 ```
-* ' " ' are important to keep
 
-### For VCF files 
-For the excution of VCF files the command could look like this for an execution with the genome build hg19:
+**Hint:** Be aware of the correct use of quotes ' " '.
+
+
+### VCF Files 
+
+Example code for running SV-MeCa starting from VCF files and using reference genome build hg19:
 
 ```
 docker run -v /your/directory/input/path:/input -v /your/directory/output/path:/workspace/SV-MeCa/results wembasop/sv-meca:1.0 "/workspace/SV-MeCa/run_svmeca.sh vcf -bd /input/breakdancer.vcf -dl /input/delly.vcf -is /input/insurveyor.vcf -lp /input/lumpy.vcf -mt /input/manta.vcf -pd /input/pindel.vcf -td /input/tardis.vcf -st /input/stats.txt -sample yoursamplename -build hg19 -no_chr true" 
 ```
-* ' " ' are important to keep
 
-The file `stats.txt` is required, as it provide informations abour coverage and readlen of the data. It looks like:
+**Hint:** Be aware of the correct use of quotes ' " '.
+
+In VCF mode, the additional input file `stats.txt` is requried to provide information about mean sequencing coverage and read lengths. 
+
+[Example file](https://github.com/wembaSop/SV-MeCa/tree/master/Test/stats.txt) content:
 
 ```
 coverage=50
 readlen=65
 ```
 
-An example of it is provided [here](https://github.com/wembaSop/SV-MeCa/tree/master/Test/stats.txt) 
-
-It's required only for the VCF mode, as the provided informations are automatically fetched from the data in the BAM modus.
+In BAM mode, information on sequencing coverage and read lengths are automatically fetched from input data. 
