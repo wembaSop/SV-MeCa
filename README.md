@@ -90,7 +90,7 @@ Example code for running SV-MeCa starting from BAM files and using reference gen
 docker run -v /your/directory/input/path:/input -v /your/directory/output/path:/workspace/SV-MeCa/results wembasop/sv-meca:1.0 "/workspace/SV-MeCa/run_svmeca.sh bam -bam /input/yourbam.bam -ref /input/yourref.fasta -sample yoursamplename -build hg38 -no_chr true" 
 ```
 
-**Hint:** Be aware of the correct use of quotes ' " '.
+**Hint:** Be aware of the correct use of quotation marks `"`.
 
 
 ### VCF Files 
@@ -101,7 +101,7 @@ Example code for running SV-MeCa starting from VCF files and using reference gen
 docker run -v /your/directory/input/path:/input -v /your/directory/output/path:/workspace/SV-MeCa/results wembasop/sv-meca:1.0 "/workspace/SV-MeCa/run_svmeca.sh vcf -bd /input/breakdancer.vcf -dl /input/delly.vcf -is /input/insurveyor.vcf -lp /input/lumpy.vcf -mt /input/manta.vcf -pd /input/pindel.vcf -td /input/tardis.vcf -st /input/stats.txt -sample yoursamplename -build hg19 -no_chr true" 
 ```
 
-**Hint:** Be aware of the correct use of quotes ' " '.
+**Hint:** Be aware of the correct use of quotation marks `"`.
 
 In VCF mode, the additional input file `stats.txt` is requried to provide information about mean sequencing coverage and read lengths. 
 
@@ -112,4 +112,4 @@ coverage=50
 readlen=65
 ```
 
-In BAM mode, information on sequencing coverage and read lengths are automatically fetched from input data. 
+Note that in BAM mode, information on sequencing coverage and read lengths are automatically fetched from input data. 
