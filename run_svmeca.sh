@@ -216,5 +216,7 @@ BASE="--containerBind $WORK --format $FMT"
 PARAMS="--build $BUILD --sample $SAMPLE --no_chr $NO_CHR ${PARAMS}"
 
 # Run nextflow command
+echo ""
 echo "nextflow run main.nf $BASE $PARAMS$EXTRA"
-
+echo ""
+nextflow run main.nf $BASE $PARAMS$EXTRA
