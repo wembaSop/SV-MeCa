@@ -111,6 +111,6 @@ coverage=50
 readlen=65
 ```
 
-An example of it is provide [here](https://github.com/wembaSop/SV-MeCa/tree/master/Test/stats.txt) 
+An example of it is provided [here](https://github.com/wembaSop/SV-MeCa/tree/master/Test/stats.txt) 
 
 It's required only for the VCF mode, as the provided informations are automatically fetched from the data in the BAM modus.
