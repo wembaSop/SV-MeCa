@@ -25,7 +25,7 @@ PRECISE vs IMPRECISE | | | * | | | |
 
 ### Quality Metrics Considered for Insertion & Duplication Calls (Summarizing Overview)
 
-| Quality Metric | Delly | InSurVeyor | Manta | Pindel | TARDIS |
+| Quality Metric | Delly | INSurVeyor | Manta | Pindel | TARDIS |
 | --- | :---: | :---: | :---: | :---: | :---: | 
 No. of Supporting Read Pairs |  | * | * |  |  |  
 No. of Supporting Split Reads | | * | * | | * | 
