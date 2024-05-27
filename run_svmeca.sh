@@ -212,7 +212,7 @@ esac
 
 LOG="${LOG_D}/.nextflow_${SAMPLE}.log"
 WORK="/tmp/scratch/${SAMPLE}"
-BASE="-w $WORK--containerBind $WORK --format $FMT"
+BASE="-w $WORK --containerBind $WORK --format $FMT"
 PARAMS="--build $BUILD --sample $SAMPLE --no_chr $NO_CHR ${PARAMS}"
 
 # Run nextflow command
