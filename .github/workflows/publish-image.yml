@@ -25,7 +25,7 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
-        context: .
+        context: ./docker
         push: true
         tags: |
           wembasop/sv-meca:1.0
