@@ -9,7 +9,7 @@ RUN mkdir input
 RUN conda config --add channels conda-forge && conda config --add channels bioconda
 RUN conda install -y mamba=1.5.8
 
-RUN mamba install -y nextflow=23.10.1 singularity=2.4.2
+RUN mamba install -y nextflow=23.10.1 singularity=3.8.6
 
 # Copy the Python code from the local directory to the container
 #COPY align_env.yml /workspace/
