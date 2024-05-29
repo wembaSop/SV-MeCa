@@ -29,6 +29,10 @@ RUN mv /workspace/SV-MeCa/data/tardis_latest.img /workspace/SV-MeCa/bin/
 #create the required environments
 RUN for file in $(ls conda/*.yml);do mamba env create -y -f $file;done
 
+# fix version bug of samtools
+RUN mamba install -n breakdancer samtools=1.17
+RUN mamba install -n pindel samtools=1.17
+
 # Set the entrypoint to a shell and change to the workspace directory
 ENTRYPOINT ["/bin/bash", "-c"]
 CMD ["cd /workspace && /bin/bash"]
