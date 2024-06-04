@@ -13,7 +13,6 @@ scratch/
 **.fa
 **.fai
 **.log
-bin/tardis_latest.sif
 bin/breakdancer.sif
 log.txt
 trace*
@@ -23,7 +22,6 @@ run.sh
 run.log
 data/hg19.bed
 bin/create_matrix.py
-bin/tardis_latest.img
 .gitignore
 run_svmeca_test.sh
 run_svmeca_varbank.sh
