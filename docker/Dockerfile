@@ -23,7 +23,7 @@ RUN apt-get update && \
 WORKDIR /workspace/SV-MeCa
 
 # move the tardis image
-RUN mv /workspace/SV-MeCa/data/tardis_latest.img /workspace/SV-MeCa/bin/
+#RUN mv /workspace/SV-MeCa/data/tardis_latest.img /workspace/SV-MeCa/bin/
 
 #create the required environments
 RUN for file in $(ls conda/*.yml);do mamba env create -f $file;done
