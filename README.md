@@ -90,7 +90,9 @@ Example code for running SV-MeCa starting from BAM files and using reference gen
 docker run -v /your/directory/input/path:/input -v /your/directory/output/path:/workspace/SV-MeCa/results wembasop/sv-meca:1.0 "/workspace/SV-MeCa/run_svmeca.sh bam -bam /input/yourbam.bam -ref /input/yourref.fasta -sample yoursamplename -build hg38 -no_chr true" 
 ```
 
-**Hint:** Be aware of the correct use of quotation marks `"`.
+**Hint:** 
+- Be aware of the correct use of quotation marks `"`.
+- Be aware of the option `-no_chr`: If your data have the prefix `chr`, it should be `false`, otherwise `true`
 
 
 ### VCF Files 
