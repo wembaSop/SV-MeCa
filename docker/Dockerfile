@@ -5,28 +5,23 @@ FROM condaforge/mambaforge:latest
 WORKDIR /workspace
 RUN mkdir input
 
-# Install required packages
-RUN conda config --add channels conda-forge && conda config --add channels bioconda
-
-RUN mamba install -y nextflow=23.10 singularity=3
-
-# Copy the Python code from the local directory to the container
-#COPY align_env.yml /workspace/
-
-#RUN mamba env create -y -f align_env.yml
 # Clone the GitHub repository
 RUN apt-get update && \
-    apt-get install -y git && \
+    apt-get install -y less nano git && \
     git clone https://github.com/wembaSop/SV-MeCa.git
+
+# deactivate warning outdated conda
+RUN conda config --set notify_outdated_conda false
 
 #move to the SV-MeCa repository
 WORKDIR /workspace/SV-MeCa
 
-# move the tardis image
-#RUN mv /workspace/SV-MeCa/data/tardis_latest.img /workspace/SV-MeCa/bin/
-
 #create the required environments
 RUN for file in $(ls conda/*.yml);do mamba env create -f $file;done
+
+# Install required packages
+RUN conda config --add channels bioconda
+RUN mamba install -y nextflow=23.10.1 singularity=3.8.6
 
 # fix version bug of samtools
 RUN mamba install -n breakdancer samtools=1.17
