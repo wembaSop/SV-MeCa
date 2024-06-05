@@ -509,6 +509,7 @@ workflow sv_calling {
     ref_file
     bed_file
     chr_wise
+    has_chr
     sonic
     td_markdup
 
@@ -533,10 +534,18 @@ workflow sv_calling {
     LUMPY (BAM_INDEX.out, REFERENCE_INDEX.out, bed_file)
 
     if (chr_wise){
-        //chromosomes = Channel.of(1..22,"X")
-        chromosomes = Channel.of(1..22).map{"${it}"}
-        PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, bed_file, chromosomes)
-        MERGE_PINDEL_SINGLE (PINDEL_SINGLE.out.collect())
+        if (has_chr){
+            //chromosomes = Channel.of(1..22,"X")
+            chromosomes = Channel.of(1..22).map{"chr${it}"}
+            PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, bed_file, chromosomes)
+            MERGE_PINDEL_SINGLE (PINDEL_SINGLE.out.collect())
+        } else {
+            //chromosomes = Channel.of(1..22,"X")
+            chromosomes = Channel.of(1..22).map{"${it}"}
+            PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, bed_file, chromosomes)
+            MERGE_PINDEL_SINGLE (PINDEL_SINGLE.out.collect())
+        }
+
     } else{
         chromosomes = Channel.of("ALL")
         PINDEL_SINGLE (BAM_INDEX.out, REFERENCE_INDEX.out, bed_file, chromosomes)
@@ -593,7 +602,7 @@ workflow{
     // Start from BAM files. 
     } else if (params.format == "bam"){
         
-        sv_calling(params.input, params.reference, params.bed, params.pd_multi, params.sonic, params.enable_markdup)
+        sv_calling(params.input, params.reference, params.bed, params.pd_multi, params.has_chr, params.sonic, params.enable_markdup)
         merge_score(sv_calling.out.breakdancer, sv_calling.out.delly, sv_calling.out.insurveyor, sv_calling.out.lumpy, sv_calling.out.manta, sv_calling.out.pindel, sv_calling.out.tardis, params.model_del, params.model_ins, sv_calling.out.stats)
     
     //start from VCF

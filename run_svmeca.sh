@@ -8,7 +8,7 @@ LOG_D="/tmp/.log"
 FMT=""
 SAMPLE=""
 BUILD=""
-NO_CHR=""
+HAS_CHR=""
 
 INPUT=""
 REF=""
@@ -34,17 +34,17 @@ if [ ! -d "$LOG_D" ]; then
 fi
 
 usage() {
-    echo "Usage: $0 <BAM|VCF> [options]"
+    echo "Usage: $0 <bam|vcf> [options]"
     echo "Version: $SCRIPT_VERSION"
     echo "Description: This script is used to run the SV-MeCa pipeline,"
     echo "             meta-caller for structural variant detection," 
     echo "             depending on the user input format. BAM or VCF files."
     echo "Options:"
-    echo "  For BAM:"
+    echo "  For BAM input:"
     echo "    -bam <bam>: Input BAM file"
     echo "    -ref <fasta|fa>: Reference genome file"
     echo "    -bed <bed>: BED file (optional)"
-    echo "  For VCF:"
+    echo "  For VCF input:"
     echo "    -bd <vcf>: BreakDancer VCF"
     echo "    -dl <vcf>: Delly VCF"
     echo "    -is <vcf>: INSurVeyor VCF"
@@ -56,7 +56,7 @@ usage() {
     echo "General options:"
     echo "    -sample <value>: Sample name (required)"
     echo "    -build <hg38|hg19>: Build value (required)"
-    echo "    -no_chr <true|false>: Specify whether to include chr prefix (required)"
+    echo "    -has_chr <true|false>: Specify whether the input chromosome data has chr prefix (required)"
     echo "    -extra <extra_value>: Extra nextflow options (optional)"
     exit 1
 }
@@ -100,14 +100,14 @@ case $FMT in
                             ;;
                     esac
                     ;;
-                -no_chr)
+                -has_chr)
                     case $2 in
                         "true"|"false")
-                            NO_CHR=$2
+                            HAS_CHR=$2
                             shift 2
                             ;;
                         *)
-                            echo "Invalid value for -no_chr. Accepted values are 'true' or 'false'"
+                            echo "Invalid value for -has_chr. Accepted values are 'true' or 'false'"
                             usage
                             ;;
                     esac
@@ -121,11 +121,11 @@ case $FMT in
                     ;;
             esac
         done
-        if [ -z "$INPUT" ] || [ -z "$REF" ] || [ -z "$SAMPLE" ] || [ -z "$BUILD" ] || [ -z "$NO_CHR" ]; then
+        if [ -z "$INPUT" ] || [ -z "$REF" ] || [ -z "$SAMPLE" ] || [ -z "$BUILD" ] || [ -z "$HAS_CHR" ]; then
             echo "Missing required parameters for BAM format"
             usage
         fi
-        PARAMS="--input $INPUT --reference $REF --bed $BED" #"--build $BUILD --sample $SAMPLE --no_chr $NO_CHR"
+        PARAMS="--input $INPUT --reference $REF --bed $BED" #"--build $BUILD --sample $SAMPLE --has_chr $HAS_CHR"
         ;;
     "vcf")
         while [ "$#" -gt 0 ]; do
@@ -178,14 +178,14 @@ case $FMT in
                             ;;
                     esac
                     ;;
-                -no_chr)
+                -has_chr)
                     case $2 in
                         "true"|"false")
-                            NO_CHR=$2
+                            HAS_CHR=$2
                             shift 2
                             ;;
                         *)
-                            echo "Invalid value for -no_chr. Accepted values are 'true' or 'false'"
+                            echo "Invalid value for -has_chr. Accepted values are 'true' or 'false'"
                             usage
                             ;;
                     esac
@@ -199,7 +199,7 @@ case $FMT in
                     ;;
             esac
         done
-        if [ -z "$BD" ] || [ -z "$DL" ] || [ -z "$IS" ] || [ -z "$LP" ] || [ -z "$MT" ] || [ -z "$PD" ] || [ -z "$TD" ] || [ -z "$STS" ] || [ -z "$SAMPLE" ] || [ -z "$BUILD" ] || [ -z "$NO_CHR" ]; then
+        if [ -z "$BD" ] || [ -z "$DL" ] || [ -z "$IS" ] || [ -z "$LP" ] || [ -z "$MT" ] || [ -z "$PD" ] || [ -z "$TD" ] || [ -z "$STS" ] || [ -z "$SAMPLE" ] || [ -z "$BUILD" ] || [ -z "$HAS_CHR" ]; then
             echo "Missing required parameters for VCF format"
             usage
         fi
@@ -213,7 +213,7 @@ esac
 LOG="${LOG_D}/.nextflow_${SAMPLE}.log"
 WORK="/tmp/scratch/${SAMPLE}"
 BASE="-w $WORK --containerBind $WORK --format $FMT"
-PARAMS="--build $BUILD --sample $SAMPLE --no_chr $NO_CHR ${PARAMS}"
+PARAMS="--build $BUILD --sample $SAMPLE --has_chr $HAS_CHR ${PARAMS}"
 
 # Run nextflow command
 echo ""
