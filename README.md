@@ -103,7 +103,9 @@ Example code for running SV-MeCa starting from VCF files and using reference gen
 docker run -v /your/directory/input/path:/input -v /your/directory/output/path:/workspace/SV-MeCa/results wembasop/sv-meca:1.0 "/workspace/SV-MeCa/run_svmeca.sh vcf -bd /input/breakdancer.vcf -dl /input/delly.vcf -is /input/insurveyor.vcf -lp /input/lumpy.vcf -mt /input/manta.vcf -pd /input/pindel.vcf -td /input/tardis.vcf -st /input/stats.txt -sample yoursamplename -build hg19 -has_chr true" 
 ```
 
-**Hint:** Be aware of the correct use of quotation marks `"`.
+**Hint:** 
+- Be aware of the correct use of quotation marks `"`.
+- All VCF files must be provided.
 
 In VCF mode, the additional input file `stats.txt` is required to provide information about mean sequencing coverage and read lengths. 
 
