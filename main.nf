@@ -305,7 +305,7 @@ process PINDEL_SINGLE {
         INSERT="$(grep 'readgroup' "!{fileSimpleName}.cfg"|head -n 1 | cut -f 9 |cut -d ':' -f 2)"
         INSER=${INSERT%.*}
         echo -e !{fileName}"\t$INSER\t"PD_${SAMPLE} > pindel_config.txt
-        pindel -N -M 3 -r false -T !{task.cpus} -f !{ref} -i pindel_config.txt -c !{chr} -o !{fileSimpleName}!{my_bed}
+        pindel -N -M 3 -r false -w 1 -T !{task.cpus} -f !{ref} -i pindel_config.txt -c !{chr} -o !{fileSimpleName}!{my_bed}
         pindel2vcf -P !{fileSimpleName} -is 50 -e 3 -r !{ref} -R GRCH38 -d `date +'%m/%d/%Y'` -v "!{outfile}.raw.vcf"
         bgzip "!{outfile}.raw.vcf"
         tabix -p vcf "!{outfile}.raw.vcf.gz"
