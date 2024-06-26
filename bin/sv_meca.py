@@ -628,9 +628,9 @@ def create_header(the_infile, the_outname, the_contigs):
             "##source=SV-MeCav1.0", 
             f'##fileDate={str(datetime.now()).split()[0].replace("-","")}',
             "##FILTER=<ID=LowProb,Description=\"Low probability to represent a real Structural Variant (SV) based on quality metrics from SV callers\">",
-            "##INFO=<ID=IDS,Number=.,Type=String,Description=IDs of initial variant calls from SV callers supporting the variant. See SUPP_VEC relate about the order\">",
-            "##INFO=<ID=SUPP,Number=1,Type=Integer,Description=Number of standalone SV callers supporting the variant call\">",
-            "##INFO=<ID=SUPP_VEC,Number=1,Type=String,Description=Vector of supporting SV callers in the following order: BreakDancer, Delly, InSurVeyor, Lumpy, Manta, Pindel, TARDIS. 1=support the variant, 0=do not support.\">",
+            "##INFO=<ID=IDS,Number=.,Type=String,Description=\"IDs of initial variant calls from SV callers supporting the variant. See SUPP_VEC relate about the order\">",
+            "##INFO=<ID=SUPP,Number=1,Type=Integer,Description=\"Number of standalone SV callers supporting the variant call\">",
+            "##INFO=<ID=SUPP_VEC,Number=1,Type=String,Description=\"Vector of supporting SV callers in the following order: BreakDancer, Delly, InSurVeyor, Lumpy, Manta, Pindel, TARDIS. 1=support the variant, 0=do not support.\">",
             "##INFO=<ID=END,Number=1,Type=Integer,Description=\"End position of the structural variant\">",
             "##INFO=<ID=SVLEN,Number=1,Type=Integer,Description=\"Length of the SV\">",
             "##INFO=<ID=SVTYPE,Number=1,Type=String,Description=\"Type of the SV\">"
