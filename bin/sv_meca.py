@@ -662,7 +662,9 @@ def build_vcf(vcf_file, my_df, svtype, columns, filter):
                     IDS+=row[column]+","
             except KeyError:
                 SUPP_VEC+="0"
-        
+        # remove "," at the end of IDS
+        if IDS[-1]==",":
+            IDS=IDS[:-1]
         line=[str(row["CHROM"]),str(row["POS"]),row["SURVIVOR_ID"], row["REF"], row["ALT"],str(int(row["Probs"]*1000)),f'{"PASS" if row["Probs"]>filter else "LowProb"}',f'IDS={IDS[:-1]};SUPP={SUPP};SUPP_VEC={SUPP_VEC};SVLEN={row["SVLEN"]};SVTYPE={svtype};END={row["END"]}']
         vcf_file.write("\t".join(line)+"\n")
 

@@ -25,3 +25,4 @@ bin/create_matrix.py
 .gitignore
 run_svmeca_test.sh
 run_svmeca_varbank.sh
+use_case*

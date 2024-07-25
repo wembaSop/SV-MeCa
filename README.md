@@ -82,8 +82,9 @@ General options:
 ```
 SV-MeCa supports two types of initial input data: BAM files and VCF files. 
 
-### BAM Files 
+### Input 
 
+#### BAM Files
 Example code for running SV-MeCa starting from BAM files and using reference genome build hg38:
 
 ```
@@ -95,7 +96,7 @@ docker run -v /your/directory/input/path:/input -v /your/directory/output/path:/
 - Be aware of the option `-has_chr`: If your data have chromosomes in the form `chr17`, it should be `true`, otherwise `false`
 
 
-### VCF Files 
+#### VCF Files 
 
 Example code for running SV-MeCa starting from VCF files and using reference genome build hg19:
 
@@ -117,3 +118,42 @@ readlen=65
 ```
 
 Note that in BAM mode, information on sequencing coverage and read lengths are automatically fetched from input data. 
+
+### Output
+
+#### Folder Structure
+After the execution of SV-MeCa, a folder named by the provided sample name will be findable into the output folder.
+
+The following structure should be expected:
+
+Output_folder\
+  - Sample name\
+    - merge\ 
+      - `samplename`.`sv_caller`.edit.sort.vcf : processed & filtered vcf files used for the merging step with SURVIVOR (Only `INS` and `DEL` )
+      - `samplename`.merge.stats: some infos about the data: Amount of SVs per tool that have been merged by SURVIVOR, mean coverage, length of the reads
+      - `samplename`.survivor.vcf: merged VCF file from SURVIVOR
+    - metrics\
+      - `samplename`.metrics: GATK CollectWgsMetrics output file 
+    - pindel\
+      - `samplename`.`chr`.pindel.vcf: VCF pindel output per chromosom
+    - standalone\
+      - `samplename`.`sv_caller`.vcf: VCF files from the standalone SV callers (+ `.cfg` file from breakdancer)
+    - sv-meca\
+      - `samplename`.svmeca.vcf: SV-MeCa output containing `DEL` & `INS` SVs. The `QUAL` column contains scores in a range from [0-1000] corresponding to the probability (`QUAL = Prob *1000`) to represent true positive SVs.
+    - report_`samplename`.html: A HTML report containing metrics about the execution
+    - timeline_`samplename`.html: Representation f the execution timeline of each process in a HTML format
+    - trace_`samplename`.tsv : containing usefull informations about each process executed in the pipeline. cpu, memory used, time, ...
+
+#### SV-MeCa VCF
+
+An example SV call in the VCF looks as follow:
+```
+1       991955  BD_2        C       <DEL>   306     LowProb IDS=BD_2,vh_del_2668;SUPP=2;SUPP_VEC=1000001;SVLEN=755;SVTYPE=DEL;END=992469
+```
+
+The SV call (Deletion) of length `755` on chromosome `1` at position `991955` with the ID `BD2`, has a score of `306`,i.e a probability of 0.306 to represent a TP SV. Since it's under 0.5 the filter is not PASS and the SV is flag with `LowProb`. The call is detected by two callers (`SUPP=2`), which are BreakDancer and TARDIS(`SUPP_VEC=1000001`). `SUPP_VEC` encodes in a binary form the standalone SV caller, which detected the putative SV, always in the following order: BreakDancer(1), Delly(0), INSurVeyor(0), Lumpy(0), Manta(0), Pindel(0), TARDIS(1). The INFO tag `IDS` contains the ID of the SV Call in the original output of the standalone SV callers([see](#folder-structure)). 
+
+
+## Questions:
+
+Feel free to open an issue for further questions, thanks!
