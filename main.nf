@@ -125,6 +125,7 @@ process BREAKDANCER {
     output:
         path "*breakdancer.vcf", emit: vcf
         path "*breakdancer.cfg", emit: cfg
+        path "*breakdancer.ctx", emit: ctx
         
     shell:
 
@@ -279,7 +280,7 @@ process MANTA {
 //here update parameters
 process PINDEL_SINGLE {
     
-    publishDir "$PUBLISH/pindel", mode: "copy"  
+    //publishDir "$PUBLISH/pindel", mode: "copy"  
 
     input:
         tuple path(bam),path(bam_index)
