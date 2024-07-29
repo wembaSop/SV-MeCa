@@ -85,27 +85,32 @@ SV-MeCa supports two types of initial input data: BAM files and VCF files.
 ### Input 
 
 #### BAM Files
-Example code for running SV-MeCa starting from BAM files and using reference genome build hg38:
+Example code for running SV-MeCa starting from BAM files and using reference genome build hg38. In this example BAM files are on the host machine under /inputbam, the reference file under /inputref, the bed file under /inputbed, and the user want to save the output under /output 
 
 ```
-docker run -v /your/directory/input/path:/input -v /your/directory/output/path:/workspace/SV-MeCa/results wembasop/sv-meca:1.0 "/workspace/SV-MeCa/run_svmeca.sh bam -bam /input/yourbam.bam -ref /input/yourref.fasta -sample yoursamplename -build hg38 -has_chr true" 
+docker run -v /inputbam:/bam -v /inputref:/ref -v /inputbed:/bed -v /output:/workspace/SV-MeCa/results wembasop/sv-meca:1.0 "/workspace/SV-MeCa/run_svmeca.sh bam -bam /bam/yourbam.bam -ref /ref/yourref.fasta -sample yoursamplename -build hg38 -has_chr true" -bed /bed/yourbed.bed 
 ```
+with `/workspace/SV-MeCa/results` static!
 
 **Hint:** 
 - Be aware of the correct use of quotation marks `"`.
 - Be aware of the option `-has_chr`: If your data have chromosomes in the form `chr17`, it should be `true`, otherwise `false`
+- Depending on the location of your files, fewer/more bind (-v) are possible. Docker doesn't allow more than one host path to be bound to a container path. 
 
 
 #### VCF Files 
 
-Example code for running SV-MeCa starting from VCF files and using reference genome build hg19:
+Example code for running SV-MeCa starting from VCF files and using reference genome build hg19. In this example VCF files and the statistic file are all into the same folder on the host machine under /your/directory/input/path and the user want to save the output under /your/directory/output/path
 
 ```
 docker run -v /your/directory/input/path:/input -v /your/directory/output/path:/workspace/SV-MeCa/results wembasop/sv-meca:1.0 "/workspace/SV-MeCa/run_svmeca.sh vcf -bd /input/breakdancer.vcf -dl /input/delly.vcf -is /input/insurveyor.vcf -lp /input/lumpy.vcf -mt /input/manta.vcf -pd /input/pindel.vcf -td /input/tardis.vcf -st /input/stats.txt -sample yoursamplename -build hg19 -has_chr true" 
 ```
+with `/workspace/SV-MeCa/results` static!
 
 **Hint:** 
 - Be aware of the correct use of quotation marks `"`.
+- Be aware of the option `-has_chr`: If your data have chromosomes in the form `chr17`, it should be `true`, otherwise `false`
+- Depending on the location of your files, fewer/more bind (-v) are possible. Docker doesn't allow more than one host path to be bound to a container path. 
 - All VCF files must be provided.
 
 In VCF mode, the additional input file `stats.txt` is required to provide information about mean sequencing coverage and read lengths. 
@@ -134,15 +139,14 @@ Output_folder\
       - `samplename`.survivor.vcf: merged VCF file from SURVIVOR
     - metrics\
       - `samplename`.metrics: GATK CollectWgsMetrics output file 
-    - pindel\
-      - `samplename`.`chr`.pindel.vcf: VCF pindel output per chromosom
     - standalone\
       - `samplename`.`sv_caller`.vcf: VCF files from the standalone SV callers (+ `.cfg` file from breakdancer)
+      - `samplename`.breakdancer.ctx: Breakdancer original CTX output file 
     - sv-meca\
       - `samplename`.svmeca.vcf: SV-MeCa output containing `DEL` & `INS` SVs. The `QUAL` column contains scores in a range from [0-1000] corresponding to the probability (`QUAL = Prob *1000`) to represent true positive SVs.
-    - report_`samplename`.html: A HTML report containing metrics about the execution
-    - timeline_`samplename`.html: Representation f the execution timeline of each process in a HTML format
-    - trace_`samplename`.tsv : containing usefull informations about each process executed in the pipeline. cpu, memory used, time, ...
+    - report_`samplename`.html: [Nextflow report](https://www.nextflow.io/docs/latest/tracing.html#execution-report) containing metrics about the execution
+    - timeline_`samplename`.html: [Nextflow timeline](https://www.nextflow.io/docs/latest/tracing.html#timeline-report) execution of each process
+    - trace_`samplename`.tsv : [Nextflow trace](https://www.nextflow.io/docs/latest/tracing.html#trace-report) containing informations about each process executed in the pipeline: task_id,	hash,	native_id,	name,	status,	attempt,	exit,	realtime,	cpus,	%cpu,	memory,	%mem,	rss,	vmem,	peak_rss,	peak_vmem
 
 #### SV-MeCa VCF
 
@@ -153,6 +157,22 @@ An example SV call in the VCF looks as follow:
 
 The SV call (Deletion) of length `755` on chromosome `1` at position `991955` with the ID `BD2`, has a score of `306`,i.e a probability of 0.306 to represent a TP SV. Since it's under 0.5 the filter is not PASS and the SV is flag with `LowProb`. The call is detected by two callers (`SUPP=2`), which are BreakDancer and TARDIS(`SUPP_VEC=1000001`). `SUPP_VEC` encodes in a binary form the standalone SV caller, which detected the putative SV, always in the following order: BreakDancer(1), Delly(0), INSurVeyor(0), Lumpy(0), Manta(0), Pindel(0), TARDIS(1). The INFO tag `IDS` contains the ID of the SV Call in the original output of the standalone SV callers([see](#folder-structure)). 
 
+## SV-MeCa on HPC
+
+### Singularity 
+To run SV-MeCa with singularity you need a machine with root rigths. These steps should be done:
+
+Machine with root rights
+- Fetch the docker image as described in [installation](#installation)
+- Build a singularity container from the docker-daemon as described [here](https://stackoverflow.com/questions/60314664/how-to-build-singularity-container-from-dockerfile)
+
+HPC Machine / local machine (without root rights) 
+- Copy the image to the HPC machine
+- Run SV-MeCa with singularity considering the volumes to bind. 
+
+### Clone GitHub repository
+There is a way to execute SV-MeCa without docker which need advanced configuration requirements and enable the user to use different executors like SLURM or SGE. Here is list of [supported executors](https://www.nextflow.io/docs/latest/executor.html) 
+Due to the amount of axecutor it's not possible to produce a comprehensive documentation. Feel free to open an issue or contact rudel.nkouamedjo-fankep@uk-koeln.de for further support on that question.
 
 ## Questions:
 
