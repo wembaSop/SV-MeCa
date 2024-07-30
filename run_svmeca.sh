@@ -125,7 +125,8 @@ case $FMT in
             echo "Missing required parameters for BAM format"
             usage
         fi
-        PARAMS="--input $INPUT --reference $REF --bed $BED" #"--build $BUILD --sample $SAMPLE --has_chr $HAS_CHR"
+        PARAMS="--input $INPUT --reference $REF" #"--build $BUILD --sample $SAMPLE --has_chr $HAS_CHR"
+        [ -n "$BED" ] && PARAMS="$PARAMS --bed $BED"
         ;;
     "vcf")
         while [ "$#" -gt 0 ]; do
