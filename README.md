@@ -3,13 +3,13 @@
 
 ## Introduction
 
-SV-MeCa is a meta-caller for WGS short read data that combines seven standalone structural variant (SV) callers, including [BreakDancer](https://github.com/genome/breakdancer), [Delly](https://github.com/dellytools/delly), [INSurVeyor](https://github.com/kensung-lab/INSurVeyor), [Lumpy](https://github.com/arq5x/lumpy-sv), [Manta](https://github.com/Illumina/manta), [Pindel](https://github.com/genome/pindel), and [TARDIS](https://github.com/BilkentCompGen/tardis). The results from each caller are merged using the tool [SURVIVOR](https://github.com/fritzsedlazeck/SURVIVOR), considering the type of SV but not the strand.
+SV-MeCa is a meta-caller for WGS short read data that combines seven standalone structural variant (SV) callers, including [BreakDancer](https://github.com/genome/breakdancer), [Delly](https://github.com/dellytools/delly), [INSurVeyor](https://github.com/kensung-lab/INSurVeyor), [LUMPY](https://github.com/arq5x/lumpy-sv), [Manta](https://github.com/Illumina/manta), [Pindel](https://github.com/genome/pindel), and [TARDIS](https://github.com/BilkentCompGen/tardis). The results from each caller are merged using the tool [SURVIVOR](https://github.com/fritzsedlazeck/SURVIVOR), considering the type of SV but not the strand.
 
 What sets SV-MeCa apart from other meta-callers is its use of specific quality metrics from each SV caller (see Tables below). These metrics, normalized by coverage or read length if necessary, were used as inputs to train XGBoost decision tree classifiers that predict the probability of an SV call being a true positive, i.e., a real-wolrd variant.
 
 ### Quality Metrics Considered for Deletion Calls (Summarizing Overview)
 
-| Quality Metric | BreakDancer | Delly | Lumpy | Manta | Pindel | TARDIS |
+| Quality Metric | BreakDancer | Delly | LUMPY | Manta | Pindel | TARDIS |
 | --- | :---: | :---: | :---: | :---: | :---: | :---: |
 No. of Supporting Read Pairs | * | | |  * |  | * | 
 No. of Supporting Split Reads | | * | | | | * |
@@ -90,7 +90,7 @@ Example code for running SV-MeCa starting from BAM files and using reference gen
 ```
 docker run -v /inputbam:/bam -v /inputref:/ref -v /inputbed:/bed -v /output:/workspace/SV-MeCa/results wembasop/sv-meca:1.0 "/workspace/SV-MeCa/run_svmeca.sh bam -bam /bam/yourbam.bam -ref /ref/yourref.fasta -sample yoursamplename -build hg38 -has_chr true" -bed /bed/yourbed.bed 
 ```
-with `/workspace/SV-MeCa/results` static!
+Note that `/workspace/SV-MeCa/results` is static.
 
 **Hint:** 
 - Be aware of the correct use of quotation marks `"`.
@@ -105,7 +105,7 @@ Example code for running SV-MeCa starting from VCF files and using reference gen
 ```
 docker run -v /your/directory/input/path:/input -v /your/directory/output/path:/workspace/SV-MeCa/results wembasop/sv-meca:1.0 "/workspace/SV-MeCa/run_svmeca.sh vcf -bd /input/breakdancer.vcf -dl /input/delly.vcf -is /input/insurveyor.vcf -lp /input/lumpy.vcf -mt /input/manta.vcf -pd /input/pindel.vcf -td /input/tardis.vcf -st /input/stats.txt -sample yoursamplename -build hg19 -has_chr true" 
 ```
-with `/workspace/SV-MeCa/results` static!
+Note that `/workspace/SV-MeCa/results` is static.
 
 **Hint:** 
 - Be aware of the correct use of quotation marks `"`.
