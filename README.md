@@ -127,21 +127,20 @@ Note that in BAM mode, information on sequencing coverage and read lengths are a
 ### Output
 
 #### Folder Structure
-After the execution of SV-MeCa, a folder named by the provided sample name will be findable into the output folder.
 
-The following structure should be expected:
+SV-MeCa creates the following folder structure as output, with the parent directory named by `<sample_name>` as specified by `-sample`: 
 
-Output_folder\
-  - Sample name\
+output_folder\
+  - `<sample_name>`\
     - merge\ 
-      - `samplename`.`sv_caller`.edit.sort.vcf : processed & filtered vcf files used for the merging step with SURVIVOR (Only `INS` and `DEL` )
-      - `samplename`.merge.stats: some infos about the data: Amount of SVs per tool that have been merged by SURVIVOR, mean coverage, length of the reads
-      - `samplename`.survivor.vcf: merged VCF file from SURVIVOR
+      - `<sample_name>.sv_caller.edit.sort.vcf` : processed & filtered VCF files used for the merging step with SURVIVOR (contains exclusively insertion and deletion calls)
+      - `<sample_name>.merge.stats` : some information about the input data: amount of SV calls per tool that have been merged by SURVIVOR, mean coverage, and length of the reads
+      - `<sample_name>.survivor.vcf` : merged VCF file obtained from SURVIVOR
     - metrics\
-      - `samplename`.metrics: GATK CollectWgsMetrics output file 
+      - `<samplename>.metrics` : GATK CollectWgsMetrics output file 
     - standalone\
-      - `samplename`.`sv_caller`.vcf: VCF files from the standalone SV callers (+ `.cfg` file from breakdancer)
-      - `samplename`.breakdancer.ctx: Breakdancer original CTX output file 
+      - `<sample_name>.sv_caller.vcf` : VCF files obtained from the standalone SV callers
+      - `<sample_name>.breakdancer.ctx`, `<sample_name>.breakdancer.cfg`: raw BreakDancer output files 
     - sv-meca\
       - `samplename`.svmeca.vcf: SV-MeCa output containing `DEL` & `INS` SVs. The `QUAL` column contains scores in a range from [0-1000] corresponding to the probability (`QUAL = Prob *1000`) to represent true positive SVs.
     - report_`samplename`.html: [Nextflow report](https://www.nextflow.io/docs/latest/tracing.html#execution-report) containing metrics about the execution
