@@ -184,7 +184,7 @@ To run SV-MeCa with Singularity you need a machine with root privileges. The fol
 
 ### Clone GitHub repository
 There is a way to execute SV-MeCa without Docker which need advanced configuration requirements and enable the user to use different executors like SLURM or SGE. Here is list of [supported executors](https://www.nextflow.io/docs/latest/executor.html) 
-Due to the amount of possible executors it's not feasible to provide a comprehensive documentation for all of them. Feel free to open an issue or contact rudel.nkouamedjo-fankep@uk-koeln.de for further support on that question.
+Due to the amount of possible executors it's not feasible to provide a comprehensive documentation for all of them. Feel free to open an issue for further support on that question.
 
 ## Questions:
 
