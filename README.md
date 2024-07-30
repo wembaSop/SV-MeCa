@@ -100,7 +100,7 @@ with `/workspace/SV-MeCa/results` static!
 
 #### VCF Files 
 
-Example code for running SV-MeCa starting from VCF files and using reference genome build hg19. In this example VCF files and the statistic file are all into the same folder on the host machine under /your/directory/input/path and the user want to save the output under /your/directory/output/path
+Example code for running SV-MeCa starting from VCF files and using reference genome build hg19. In this example, VCF files and the statistic file are all located in the same folder named `/your/directory/input/path`, and the user wants to save the output under `/your/directory/output/path`:
 
 ```
 docker run -v /your/directory/input/path:/input -v /your/directory/output/path:/workspace/SV-MeCa/results wembasop/sv-meca:1.0 "/workspace/SV-MeCa/run_svmeca.sh vcf -bd /input/breakdancer.vcf -dl /input/delly.vcf -is /input/insurveyor.vcf -lp /input/lumpy.vcf -mt /input/manta.vcf -pd /input/pindel.vcf -td /input/tardis.vcf -st /input/stats.txt -sample yoursamplename -build hg19 -has_chr true" 
