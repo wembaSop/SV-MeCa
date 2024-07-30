@@ -128,33 +128,47 @@ Note that in BAM mode, information on sequencing coverage and read lengths are a
 
 #### Folder Structure
 
-SV-MeCa creates the following folder structure as output, with the parent directory named by `<sample_name>` as specified by `-sample`: 
+SV-MeCa creates the following folder structure as output, with the parent directory named by `<sample_name>` as specified by the `-sample` argument: 
 
 output_folder\
-  - `<sample_name>`\
-    - merge\ 
+  - `<sample_name>\`
+    - `merge\` 
       - `<sample_name>.sv_caller.edit.sort.vcf` : processed & filtered VCF files used for the merging step with SURVIVOR (contains exclusively insertion and deletion calls)
       - `<sample_name>.merge.stats` : some information about the input data: amount of SV calls per tool that have been merged by SURVIVOR, mean coverage, and length of the reads
       - `<sample_name>.survivor.vcf` : merged VCF file obtained from SURVIVOR
-    - metrics\
+    - `metrics\`
       - `<samplename>.metrics` : GATK CollectWgsMetrics output file 
     - standalone\
       - `<sample_name>.sv_caller.vcf` : VCF files obtained from the standalone SV callers
-      - `<sample_name>.breakdancer.ctx`, `<sample_name>.breakdancer.cfg`: raw BreakDancer output files 
-    - sv-meca\
-      - `samplename`.svmeca.vcf: SV-MeCa output containing `DEL` & `INS` SVs. The `QUAL` column contains scores in a range from [0-1000] corresponding to the probability (`QUAL = Prob *1000`) to represent true positive SVs.
-    - report_`samplename`.html: [Nextflow report](https://www.nextflow.io/docs/latest/tracing.html#execution-report) containing metrics about the execution
-    - timeline_`samplename`.html: [Nextflow timeline](https://www.nextflow.io/docs/latest/tracing.html#timeline-report) execution of each process
-    - trace_`samplename`.tsv : [Nextflow trace](https://www.nextflow.io/docs/latest/tracing.html#trace-report) containing informations about each process executed in the pipeline: task_id,	hash,	native_id,	name,	status,	attempt,	exit,	realtime,	cpus,	%cpu,	memory,	%mem,	rss,	vmem,	peak_rss,	peak_vmem
+      - `<sample_name>.breakdancer.ctx`, `<sample_name>.breakdancer.cfg` : raw BreakDancer output files 
+    - `sv-meca\`
+      - `<sample_name>.svmeca.vcf` : SV-MeCa output containing deletion (`DEL`) & insertion (`INS`) SV calls (see description below) 
+    - `report_<sample_name>.html` : [Nextflow report](https://www.nextflow.io/docs/latest/tracing.html#execution-report) containing metrics about the execution
+    - `timeline_<sample_name.html` : [Nextflow timeline](https://www.nextflow.io/docs/latest/tracing.html#timeline-report) execution of each process
+    - `trace_<sample_name>.tsv` : [Nextflow trace](https://www.nextflow.io/docs/latest/tracing.html#trace-report) containing informations about each process executed in the pipeline: `task_id`,	`hash`,	`native_id`, `name`, `status`,	`attempt`, `exit`, `realtime`, `cpus`,	`%cpu`,	`memory`,	`%mem`,	`rss`, `vmem`,	`peak_rss`,	`peak_vmem`
 
 #### SV-MeCa VCF
 
-An example SV call in the VCF looks as follow:
+An example SV call in the SV-MeCa's output VCF `<sample_name>.svmeca.vcf` looks as follows:
 ```
 1       991955  BD_2        C       <DEL>   306     LowProb IDS=BD_2,vh_del_2668;SUPP=2;SUPP_VEC=1000001;SVLEN=755;SVTYPE=DEL;END=992469
 ```
 
-The SV call (Deletion) of length `755` on chromosome `1` at position `991955` with the ID `BD2`, has a score of `306`,i.e a probability of 0.306 to represent a TP SV. Since it's under 0.5 the filter is not PASS and the SV is flag with `LowProb`. The call is detected by two callers (`SUPP=2`), which are BreakDancer and TARDIS(`SUPP_VEC=1000001`). `SUPP_VEC` encodes in a binary form the standalone SV caller, which detected the putative SV, always in the following order: BreakDancer(1), Delly(0), INSurVeyor(0), Lumpy(0), Manta(0), Pindel(0), TARDIS(1). The INFO tag `IDS` contains the ID of the SV Call in the original output of the standalone SV callers([see](#folder-structure)). 
+This is the call of a deletion (`SVTYPE`) of length 755bp (`SVLEN`), starting from position `991955` at chromosme `1`. 
+The `QUAL` column (6th column) encodes evidence for true positive SV calls in a range from [0-1000]. Values refer to model-derived prediction probabilities multiplied by 1000. 
+In the example shown, `QUAL` score `306` refers to a probability of 0.306 of this deletion to represent a true positive SV call, i.e., real-world SV. 
+As the probability is below 0.5, the `LowProb` flag is set in the `FILTER` column.
+
+The shown VCF entry has been consistently called by 2 SV callers (`SUPP=2`), namely BreakDancer and TARDIS, as `SUPP_VEC` encodes caller agreement as binary flags in the following order: 
+1. BreakDancer
+2.  Delly
+3.  INSurVeyor
+4.  LUMPY
+5.  Manta
+6.  Pindel
+7.  TARDIS
+
+The id `BD_2` in the `ID` column refers to the corresponding entry in the original SURVIVOR-generated VCF file in output folder  `<sample_name>\merge`, the ids given by `IDS` in the `INFO` colunm (here `BD_2` and `vh_del_2668`) refer to variant call ids in standalone caller VCFs in folder `<sample_name>\standalone\` (see section Folder Structure). 
 
 ## SV-MeCa on HPC
 
