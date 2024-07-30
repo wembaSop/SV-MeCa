@@ -173,13 +173,13 @@ The id `BD_2` in the `ID` column refers to the corresponding entry in the origin
 ## SV-MeCa on HPC
 
 ### Singularity 
-To run SV-MeCa with singularity you need a machine with root rigths. These steps should be done:
+To run SV-MeCa with Singularity you need a machine with root privileges. The following steps are required:
 
-Machine with root rights
+Machine with root privileges:
 - Fetch the docker image as described in [installation](#installation)
-- Build a singularity container from the docker-daemon as described [here](https://stackoverflow.com/questions/60314664/how-to-build-singularity-container-from-dockerfile)
+- Build a Singularity container from the docker-daemon as described [here](https://stackoverflow.com/questions/60314664/how-to-build-singularity-container-from-dockerfile)
 
-HPC Machine / local machine (without root rights) 
+HPC or local machine without root privileges: 
 - Copy the image to the HPC machine
 - Run SV-MeCa with singularity considering the volumes to bind. 
 
