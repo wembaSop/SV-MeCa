@@ -175,18 +175,17 @@ The id `BD_2` in the `ID` column refers to the corresponding entry in the origin
 ### Singularity 
 To run SV-MeCa with Singularity you need a machine with root privileges. The following steps are required:
 
-Machine with root privileges:
-- Fetch the docker image as described in [installation](#installation)
-- Build a Singularity container from the docker-daemon as described [here](https://stackoverflow.com/questions/60314664/how-to-build-singularity-container-from-dockerfile)
-
-HPC or local machine without root privileges: 
-- Copy the image to the HPC machine
-- Run SV-MeCa with singularity considering the volumes to bind. 
+1. On a machine providing root privileges:
+- Fetch the Docker image as described in [installation](#installation)
+- Build a Singularity container from the Docker daemon as described [here](https://stackoverflow.com/questions/60314664/how-to-build-singularity-container-from-dockerfile).
+2. on HPC or local machine (root privileges are not required): 
+- Copy the image to the machine.
+- Run SV-MeCa with Singularity considering the volumes to bind. 
 
 ### Clone GitHub repository
-There is a way to execute SV-MeCa without docker which need advanced configuration requirements and enable the user to use different executors like SLURM or SGE. Here is list of [supported executors](https://www.nextflow.io/docs/latest/executor.html) 
-Due to the amount of axecutor it's not possible to produce a comprehensive documentation. Feel free to open an issue or contact rudel.nkouamedjo-fankep@uk-koeln.de for further support on that question.
+There is a way to execute SV-MeCa without Docker which need advanced configuration requirements and enable the user to use different executors like SLURM or SGE. Here is list of [supported executors](https://www.nextflow.io/docs/latest/executor.html) 
+Due to the amount of possible executors it's not feasible to provide a comprehensive documentation for all of them. Feel free to open an issue or contact rudel.nkouamedjo-fankep@uk-koeln.de for further support on that question.
 
 ## Questions:
 
-Feel free to open an issue for further questions, thanks!
+Feel free to open an issue in case of questions or remarks, thanks!
