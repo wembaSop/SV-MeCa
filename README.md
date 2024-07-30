@@ -85,7 +85,7 @@ SV-MeCa supports two types of initial input data: BAM files and VCF files.
 ### Input 
 
 #### BAM Files
-Example code for running SV-MeCa starting from BAM files and using reference genome build hg38. In this example BAM files are on the host machine under /inputbam, the reference file under /inputref, the bed file under /inputbed, and the user want to save the output under /output 
+Example code for running SV-MeCa starting from BAM files and using reference genome build hg38. In this example, BAM files are located under `/inputbam`, the reference FASTA file under `/inputref`, the optional input BED file under `/inputbed`, and the user wants to save the output under `/output`:
 
 ```
 docker run -v /inputbam:/bam -v /inputref:/ref -v /inputbed:/bed -v /output:/workspace/SV-MeCa/results wembasop/sv-meca:1.0 "/workspace/SV-MeCa/run_svmeca.sh bam -bam /bam/yourbam.bam -ref /ref/yourref.fasta -sample yoursamplename -build hg38 -has_chr true" -bed /bed/yourbed.bed 
