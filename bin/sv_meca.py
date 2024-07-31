@@ -557,7 +557,7 @@ def main(my_args):
     print("Sum of Covariates DEL:",sum([len(BD_COLS), len(DELLY_COLS), len(LUMPY_COLS), len(MANTA_COLS), len(PINDEL_COLS), len(TARDIS_COLS)]))
     col_order = BASE_COLS + BD_COLS + DELLY_COLS + LUMPY_COLS + MANTA_COLS + PINDEL_COLS + TARDIS_COLS
     # convert to basic type to avoid object passing to xgboost
-    for column in DATA.columns[12:]:
+    for column in DATA.columns[len(BASE_COLS):]:
         DATA[column] = pd.to_numeric(DATA[column], errors='coerce')
 
     DATA = DATA.reindex(columns=col_order)
@@ -578,7 +578,7 @@ def main(my_args):
     print("Sum of Covariates INS:",sum([len(DELLY_COLS_INS), len(INSV_COLS), len(MANTA_COLS_INS), len(PINDEL_COLS_INS), len(TARDIS_COLS_INS)]))
     col_order = BASE_COLS_INS + DELLY_COLS_INS + INSV_COLS + MANTA_COLS_INS + PINDEL_COLS_INS + TARDIS_COLS_INS
     # convert to basic type to avoid object passing to xgboost
-    for column in DATA_INS.columns[11:]:
+    for column in DATA_INS.columns[len(BASE_COLS_INS):]:
         DATA_INS[column] = pd.to_numeric(DATA_INS[column], errors='coerce')
 
     DATA_INS = DATA_INS.reindex(columns=col_order)
