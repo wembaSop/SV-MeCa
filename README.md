@@ -1,6 +1,27 @@
 # SV-MeCa: Structural Variant Meta-Caller 
 
 
+<!--ts-->
+  * [Introduction](#introduction)
+    * [Quality Metrics Considered for Deletion Calls (Summarizing Overview)](#quality-metrics-considered-for-deletion-calls-summarizing-overview)
+    * [Quality Metrics Considered for Insertion & Duplication Calls (Summarizing Overview)](#quality-metrics-considered-for-insertion--duplication-calls-summarizing-overview)
+  * [Implementation](#implementation)
+  * [Installation](#installation)
+  * [Basic Usage](#basic-usage)
+    * [Help](#help)
+    * [Input](#input)
+      * [BAM File](#bam-file)
+      * [VCF Files](#vcf-files)
+    * [Output](#output)
+      * [Folder Structure](#folder-structure)
+      * [SV-MeCa VCF](#sv-meca-vcf)
+    * [SV-MeCa on HPC](#sv-meca-on-hpc)
+      * [Singularity](#singularity)
+      * [Clone GitHub Repository](#clone-github-repository)
+  * [Questions](#questions)
+  * [Acknowledgements](#acknowledgements)
+<!--te-->
+
 ## Introduction
 
 SV-MeCa is a meta-caller for WGS short read data that combines seven standalone structural variant (SV) callers, including [BreakDancer](https://github.com/genome/breakdancer), [Delly](https://github.com/dellytools/delly), [INSurVeyor](https://github.com/kensung-lab/INSurVeyor), [LUMPY](https://github.com/arq5x/lumpy-sv), [Manta](https://github.com/Illumina/manta), [Pindel](https://github.com/genome/pindel), and [TARDIS](https://github.com/BilkentCompGen/tardis). The results from each caller are merged using the tool [SURVIVOR](https://github.com/fritzsedlazeck/SURVIVOR), considering the type of SV but not the strand.
@@ -84,7 +105,7 @@ SV-MeCa supports two types of initial input data: BAM files and VCF files.
 
 ### Input 
 
-#### BAM Files
+#### BAM File
 Example code for running SV-MeCa starting from BAM files and using reference genome build hg38. In this example, BAM files are located under `/inputbam`, the reference FASTA file under `/inputref`, the optional input BED file under `/inputbed`, and the user wants to save the output under `/output`:
 
 ```
@@ -182,10 +203,14 @@ To run SV-MeCa with Singularity you need a machine with root privileges. The fol
 - Copy the image to the machine.
 - Run SV-MeCa with Singularity considering the volumes to bind. 
 
-### Clone GitHub repository
+### Clone GitHub Repository
 There is a way to execute SV-MeCa without Docker which need advanced configuration requirements and enable the user to use different executors like SLURM or SGE. Here is list of [supported executors](https://www.nextflow.io/docs/latest/executor.html) 
 Due to the amount of possible executors it's not feasible to provide a comprehensive documentation for all of them. Feel free to open an issue for further support on that question.
 
 ## Questions:
 
 Feel free to open an issue in case of questions or remarks, thanks!
+
+## Acknowledgements:
+
+This work has been supported by the German Federal Ministry of Health within the genomDE Initiative
