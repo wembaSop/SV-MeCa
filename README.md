@@ -69,7 +69,7 @@ Installation of the [Docker Engine](https://docs.docker.com/engine/install/) is 
 
 If Docker is installed, SV-MeCa can be fetched from Docker Hub [here](https://hub.docker.com/r/wembasop/sv-meca). 
 
-A minimal example workflow for testing your installation is available in our [SV-MeCA_data](https://github.com/ccfboc-bioinformatics/SV-MeCa_data/tree/main) repository.
+A minimal example workflow for testing your installation is available in our [SV-MeCA_data](https://github.com/ccfboc-bioinformatics/SV-MeCa_data/tree/main/test) repository.
 
 ## Basic Usage
 
