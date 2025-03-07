@@ -18,7 +18,7 @@
     * [SV-MeCa on HPC](#sv-meca-on-hpc)
       * [Singularity](#singularity)
       * [Clone GitHub Repository](#clone-github-repository)
-  * LICENSE
+  * [LICENSE](#LICENCE)
   * [Questions](#questions)
 <!--te-->
 
