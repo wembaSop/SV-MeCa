@@ -210,7 +210,7 @@ There is a way to execute SV-MeCa without Docker which need advanced configurati
 Due to the amount of possible executors it's not feasible to provide a comprehensive documentation for all of them. Feel free to open an issue for further support on that question.
 
 ## LICENSE
-SV-MeCa is distributed under the MIT License. Consult the accompanying [LICENSE]([https://github.com/wembaSop](https://github.com/ccfboc-bioinformatics)/SV-MeCa/blob/master/LICENSE) file for more details.
+SV-MeCa is distributed under the MIT License. Consult the accompanying [LICENSE](https://github.com/ccfboc-bioinformatics/SV-MeCa/blob/master/LICENSE) file for more details.
 
 ## Questions:
 
