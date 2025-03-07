@@ -19,7 +19,6 @@
       * [Singularity](#singularity)
       * [Clone GitHub Repository](#clone-github-repository)
   * [Questions](#questions)
-  * [Acknowledgements](#acknowledgements)
 <!--te-->
 
 ## Introduction
@@ -213,6 +212,3 @@ Due to the amount of possible executors it's not feasible to provide a comprehen
 
 Feel free to open an issue in case of questions or remarks, thanks!
 
-## Acknowledgements:
-
-This work has been supported by the German Federal Ministry of Health within the genomDE Initiative
