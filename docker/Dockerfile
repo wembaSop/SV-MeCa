@@ -1,5 +1,5 @@
 # Use the Miniconda base image
-FROM condaforge/mambaforge:latest
+FROM condaforge/mambaforge:24.3.0-0
 
 # Set the working directory to /workspace
 WORKDIR /workspace
