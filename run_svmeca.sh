@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Script version
-SCRIPT_VERSION="1.0"
+SCRIPT_VERSION="1.1"
 
 LOG_D="/tmp/.log"
 
