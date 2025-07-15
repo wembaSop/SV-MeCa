@@ -26,3 +26,6 @@ bin/create_matrix.py
 run_svmeca_test.sh
 run_svmeca_varbank.sh
 use_case*
+testfiles
+run_svmeca_local.sh
+.gitignore
