@@ -26,5 +26,5 @@ jobs:
         context: ./docker
         push: true
         tags: |
-          wembasop/sv-meca:1.0
+          wembasop/sv-meca:1.1
           wembasop/sv-meca:latest

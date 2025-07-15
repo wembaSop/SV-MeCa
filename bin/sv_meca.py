@@ -2,6 +2,7 @@
 
 ## Authors: Rudel Christian Nkouamedjo Fankep, Corinna Ernst
 ## date : 16.04.2024
+## modified: 15.07.2025
 
 import pandas as pd
 import pickle
@@ -619,13 +620,13 @@ def main(my_args):
     DATA_INS["Prediction"] = PREDS_INS
     #print(PROBS)
     DATA_INS["Probs"] = PROBS_INS[:,1]
-    #DATA_INS.to_csv("hg002_52_ins.pred.tsv", sep='\t', index=False)
+    DATA_INS.to_csv("hg002_52_ins.pred.tsv", sep='\t', index=False)
     return DATA, DATA_INS, CONTIGS
 
 def create_header(the_infile, the_outname, the_contigs):
     the_outfile = open(the_outname,"w")
     header=["##fileformat=VCFv4.1", 
-            "##source=SV-MeCav1.0", 
+            "##source=SV-MeCav1.1", 
             f'##fileDate={str(datetime.now()).split()[0].replace("-","")}',
             "##FILTER=<ID=LowProb,Description=\"Low probability to represent a real Structural Variant (SV) based on quality metrics from SV callers\">",
             "##INFO=<ID=IDS,Number=.,Type=String,Description=\"IDs of initial variant calls from SV callers supporting the variant. See SUPP_VEC relate about the order\">",

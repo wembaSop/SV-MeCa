@@ -446,11 +446,15 @@ process SURVIVOR_MERGE {
 
         '''
         cp !{stats} "!{outfile}.merge.stats"
+
+        # If There are gz files unzip first
+        for f in $(ls *.vcf.gz); do bgzip -d "$f"; done
+        
         # Edit DUP to INS and ignore other sv than DEL DUP & INS
         for f in $(ls *.vcf);do tool=${f#*.}; echo "${tool%%.*}=$(grep -cv "^#" $f)" >> "!{outfile}.merge.stats"; edit_svtype.py $f "${f%.*}.edit.vcf";awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1V -k2,2n"}' "${f%.*}.edit.vcf" > "${f%.*}.edit.sort.vcf";done
 
         for f in $(ls *.edit.sort.vcf);do echo $f >> files.txt;done
-        SURVIVOR merge files.txt 0.9 1 1 0 0 50 merge.new.vcf &> survivor.log
+        SURVIVOR merge files.txt 50 1 1 0 0 50 merge.new.vcf &> survivor.log
         cat merge.new.vcf | awk '$1 ~ /^#/ {print $0;next} {print $0 | "sort -k1,1 -k2,2n"}' > "!{outfile}.survivor.raw.vcf"
         bgzip "!{outfile}.survivor.raw.vcf"
         tabix -p vcf "!{outfile}.survivor.raw.vcf.gz"
