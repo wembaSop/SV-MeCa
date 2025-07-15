@@ -79,7 +79,7 @@ The help of SV-MeCa (available via `docker run wembasop/sv-meca:1.0 /workspace/S
 
 ```
 Usage: ./run_svmeca.sh <bam|vcf> [options]
-Version: 1.0
+Version: 1.1
 Description: This script is used to run the SV-MeCa pipeline,
              meta-caller for structural variant detection,
              depending on the user input format. BAM or VCF files.
